@@ -1,0 +1,17 @@
+[package]
+name = "tgif"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "3.1.17", features = ["derive"] }
+log = "0.4.0"
+env_logger = "0.9.0"
+image = "0.24.2"
+ndarray = "0.15.4"
+bit-vec = "0.6.3"
+huffman-compress = "0.6.1"
+rayon = "1.5.2"
+ndarray-image = "0.3.0"
