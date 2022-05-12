@@ -24,6 +24,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "approx"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "array-init"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6945cc5422176fc5e602e590c2878d2c2acd9a4fe20a4baa7c28022521698ec6"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -39,12 +54,6 @@ name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
-
-[[package]]
-name = "bit-vec"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
 
 [[package]]
 name = "bit_field"
@@ -81,6 +90,19 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "chrono"
+version = "0.4.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
+dependencies = [
+ "libc",
+ "num-integer",
+ "num-traits",
+ "time",
+ "winapi",
+]
 
 [[package]]
 name = "clap"
@@ -313,34 +335,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "huffman-compress"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd520ff992356191b9f0ed05d972cea191590c9f985468b6ed610894cfd17e77"
-dependencies = [
- "bit-vec",
- "num-traits",
-]
-
-[[package]]
 name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
-
-[[package]]
-name = "image"
-version = "0.23.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24ffcb7e7244a9bf19d35bf2883b9c080c4ced3c07a9895572178cdb8f13f6a1"
-dependencies = [
- "bytemuck",
- "byteorder",
- "color_quant",
- "num-iter",
- "num-rational 0.3.2",
- "num-traits",
-]
 
 [[package]]
 name = "image"
@@ -355,7 +353,7 @@ dependencies = [
  "gif",
  "jpeg-decoder",
  "num-iter",
- "num-rational 0.4.0",
+ "num-rational",
  "num-traits",
  "png",
  "scoped_threadpool",
@@ -438,15 +436,6 @@ dependencies = [
 
 [[package]]
 name = "matrixmultiply"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "916806ba0031cd542105d916a97c8572e1fa6dd79c9c51e7eb43a09ec2dd84c1"
-dependencies = [
- "rawpointer",
-]
-
-[[package]]
-name = "matrixmultiply"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "add85d4dd35074e6fedc608f8c8f513a3548619a9024b751949ef0e8e45a4d84"
@@ -479,6 +468,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "nalgebra"
+version = "0.30.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fb2d0de08694bed883320212c18ee3008576bfe8c306f4c3c4a58b4876998be"
+dependencies = [
+ "approx",
+ "matrixmultiply",
+ "num-complex",
+ "num-rational",
+ "num-traits",
+ "simba",
+ "typenum",
+]
+
+[[package]]
 name = "nanorand"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -489,47 +493,27 @@ dependencies = [
 
 [[package]]
 name = "ndarray"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c0d5c9540a691d153064dc47a4db2504587a75eae07bf1d73f7a596ebc73c04"
-dependencies = [
- "matrixmultiply 0.2.4",
- "num-complex 0.3.1",
- "num-integer",
- "num-traits",
- "rawpointer",
-]
-
-[[package]]
-name = "ndarray"
 version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dec23e6762830658d2b3d385a75aa212af2f67a4586d4442907144f3bb6a1ca8"
 dependencies = [
- "matrixmultiply 0.3.2",
- "num-complex 0.4.1",
+ "matrixmultiply",
+ "num-complex",
  "num-integer",
  "num-traits",
  "rawpointer",
+ "rayon",
 ]
 
 [[package]]
-name = "ndarray-image"
-version = "0.3.0"
+name = "nshare"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3437a164d41649377b168f30af3e7beef3a1b6573ab61b24aaf38659e88f335"
+checksum = "4447657cd40e3107416ec4f2ac3e61a18781b00061789e3b8f4bbcbccb26c4c6"
 dependencies = [
- "image 0.23.14",
- "ndarray 0.14.0",
-]
-
-[[package]]
-name = "num-complex"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "747d632c0c558b87dbabbe6a82f3b4ae03720d0646ac5b7b4dae89394be5f2c5"
-dependencies = [
- "num-traits",
+ "image",
+ "nalgebra",
+ "ndarray",
 ]
 
 [[package]]
@@ -556,17 +540,6 @@ name = "num-iter"
 version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d03e6c028c5dc5cac6e2dec0efda81fc887605bb3d884578bb6d6bf7514e252"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-rational"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12ac428b1cb17fce6f731001d307d351ec70a6d202fc2e60f7d4c5e42d8f4f07"
 dependencies = [
  "autocfg",
  "num-integer",
@@ -608,6 +581,12 @@ name = "os_str_bytes"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e22443d1643a904602595ba1cd8f7d896afe56d26712531c5ff73a15b2fbf64"
+
+[[package]]
+name = "paste"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c520e05135d6e763148b6426a837e239041653ba7becd2e538c076c738025fc"
 
 [[package]]
 name = "pin-project"
@@ -731,6 +710,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
+name = "safe_arch"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "794821e4ccb0d9f979512f9c1973480123f9bd62a90d74ab0f9426fcf8f4a529"
+dependencies = [
+ "bytemuck",
+]
+
+[[package]]
 name = "scoped_threadpool"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -741,6 +729,19 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "simba"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13a2609e876d4f77f6ab7ff5254fc39b4f1927ba8e6db3d18be7c32534d3725e"
+dependencies = [
+ "approx",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "wide",
+]
 
 [[package]]
 name = "smallvec"
@@ -793,14 +794,14 @@ checksum = "b1141d4d61095b28419e22cb0bbf02755f5e54e0526f97f1e3d1d160e60885fb"
 name = "tgif"
 version = "0.1.0"
 dependencies = [
- "bit-vec",
+ "array-init",
+ "chrono",
  "clap",
  "env_logger",
- "huffman-compress",
- "image 0.24.2",
+ "image",
  "log",
- "ndarray 0.15.4",
- "ndarray-image",
+ "ndarray",
+ "nshare",
  "rayon",
 ]
 
@@ -823,6 +824,22 @@ dependencies = [
  "jpeg-decoder",
  "weezl",
 ]
+
+[[package]]
+name = "time"
+version = "0.1.43"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
+name = "typenum"
+version = "1.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
 
 [[package]]
 name = "unicode-xid"
@@ -901,6 +918,16 @@ name = "weezl"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c97e489d8f836838d497091de568cf16b117486d529ec5579233521065bd5e4"
+
+[[package]]
+name = "wide"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3aba2d1dac31ac7cae82847ac5b8be822aee8f99a4e100f279605016b185c5f"
+dependencies = [
+ "bytemuck",
+ "safe_arch",
+]
 
 [[package]]
 name = "winapi"

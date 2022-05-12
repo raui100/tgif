@@ -1,17 +1,12 @@
-use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
-use std::time::Instant;
 
-use bit_vec::BitVec;
+use chrono::Local;
 use clap::Parser;
-use huffman_compress::{codebook, CodeBuilder};
-use log::{info, LevelFilter};
-use ndarray::{Array, Ix2};
-use ndarray::prelude::*;
-use rayon::prelude::*;
+use log::{debug, info, LevelFilter};
+use ndarray::Axis;
+use ndarray::parallel::prelude::*;
+use nshare::ToNdarray2;
 
-mod decode;
 mod code;
 
 #[derive(Parser, Debug)]
@@ -19,49 +14,100 @@ mod code;
 struct Args {
     /// Input image (eg: TGIF, PNG, JPEG, GIF, BMP, ICO, TIFF, WebP, AVIF, PNM, DDS, TGA, ...)
     #[clap(long)]
-    src: PathBuf,
+    src: std::path::PathBuf,
 
     /// Output image (eg: TGIF, PNG, JPEG, GIF, BMP, ICO, TIFF, WebP, AVIF, PNM, DDS, TGA, ...)
     #[clap(long)]
-    dst: PathBuf,
+    dst: std::path::PathBuf,
 }
 
 fn main() {
-    let args = Args::parse();
     env_logger::Builder::new()
-        .format(|buf, record| {
+        .format(move |buf, record| {
             writeln!(
                 buf,
-                "{}:{} | {} | {}",
+                "{}:{} | {} | {} | {}",
                 record.file().unwrap_or("unknown"),
                 record.line().unwrap_or(0),
+                Local::now().format("%Y-%m-%dT%H:%M:%S%.3f"),
                 record.level(),
                 record.args()
             )
         })
         .filter(Some("tgif"), LevelFilter::Debug)
         .init();
-    let src = ndarray_image::open_gray_image(args.src).expect("Failed opening source file");
-    let src = image::open(args.src)
+
+    // Use this to artificially reduce the numbers of used CPU threads
+    // debug!("Limiting the number of used threads");
+    // rayon::ThreadPoolBuilder::new().num_threads(1).build_global().unwrap();
+
+    info!("Parsing arguments from CLI");
+    let args = Args::parse();
+
+    debug!("Reading the image from disk and converting it into an 2D ndarray");
+    let mut image = image::open(args.src)
         .expect("Failed reading input file.")
         .as_luma8()
         .expect("Only use this for 8-bit grayscale pictures")
-        .to_owned();
-    let (book, tree) = CodeBuilder::from_iter(code::get_weights()).finish();
-    let weights = code::get_weights();
-    let current = Instant::now();
-    let mut prev_pixel: u8 = 0;
-    let mut vec_delta: Vec<u32> = Vec::new();
-    for (x, y, pixel) in src.enumerate_pixels() {
-        if x % src.width() == 0 {
-            prev_pixel = 7;
-        }
-        let delta = pixel[0].wrapping_sub(prev_pixel);
-        let huffman_code = weights.get(&delta).unwrap();
-        vec_delta.push(*huffman_code);
-    }
-    let duration = current.elapsed();
+        .to_owned()
+        .into_ndarray2();
 
-    println!("Time elapsed in delta is: {:?}", duration);
-    println!("{:?}", &vec_delta.len());
+
+    debug!("Calculating the delta of two neighbouring pixels in a row");
+    for mut row in image.axis_iter_mut(Axis(0)) {
+        let mut prev_pixel: u8 = 0;  // pixel[-1] is defined as 0
+        for pixel in row.iter_mut() {
+            let delta: u8 = pixel.wrapping_sub(prev_pixel);
+            prev_pixel = *pixel;
+            *pixel = delta;
+        }
+    }
+
+    debug!("Creating the Huffman code for each row");
+    let code = code::get_code();
+    let mut enc: Vec<Vec<bool>> = Vec::new();
+    image.axis_iter(Axis(0))
+        .into_par_iter()  // Huffman encoding is done in parallel
+        .map(|row| {
+            let mut vec: Vec<bool> = Vec::new();
+            for delta in row.iter() {
+                let huffman = &code[*delta as usize];
+                vec.extend(huffman);
+            }
+
+            // Padding after each row of the image
+            // 1. Padding the Huffman coding with 0..7 "1" for byte alignment
+            // 2. 32 consecutive "0" to mark the end of the row
+            //
+            // -> This gives us the ability to encode/decode in parallel properly
+            let padding_0 = 32;  // Padding to mark the end of the row
+            let padding_1 = 8 - (vec.len() % 8);  // Padding for byte alignment
+            vec.extend(vec![true; padding_1]);
+            vec.extend(vec![false; padding_0]);
+
+            vec
+        })
+        .collect_into_vec(&mut enc);
+
+    debug!("Parsing to `BitVec`");
+    // let mut bv: BitVec<u8, Msb0> = BitVec::new();
+    // for vec in enc.iter() {
+    //     bv.extend(vec);
+    // }
+
+    let mut enc_u8: Vec<u8> = Vec::new();
+    for row in enc.iter() {
+        for chunk in row.chunks_exact(8) {
+            // Calculates an u8 from [bool; 8] (eg: [1111 1111] -> 255)
+            let number: u8 = chunk.iter()
+                .fold(0_u8, |value, bool| (value << 1) + (*bool as u8));
+            enc_u8.push(number);
+        }
+    }
+
+    debug!("Writing code to disk");
+    let mut file = std::fs::File::create(args.dst).expect("Failed creating destination file");
+    file.write_all(&enc_u8).expect("Failed writing to destination file");
+
+    debug!("Finished encoding to TGIF");
 }
