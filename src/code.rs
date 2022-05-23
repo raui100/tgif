@@ -1,277 +1,257 @@
-use std::collections::HashMap;
-
-pub(crate) fn get_code() -> [Vec<bool>; 256] {
-    let code_raw: HashMap<u8, &str> = HashMap::from([
-        (0, "100"),
-        (1, "011"),
-        (2, "1111"),
-        (3, "1100"),
-        (4, "0010"),
-        (5, "11010"),
-        (6, "00111"),
-        (7, "110111"),
-        (8, "000011"),
-        (9, "1010011"),
-        (10, "11011011"),
-        (11, "00001011"),
-        (12, "101001011"),
-        (13, "1101101011"),
-        (14, "1010010100"),
-        (15, "11011010100"),
-        (16, "00001010100"),
-        (17, "000010101011"),
-        (18, "1010010101010"),
-        (19, "11011010101001"),
-        (20, "110110101010111"),
-        (21, "101001010101100"),
-        (22, "1101101010101001"),
-        (23, "1010010101000100"),
-        (24, "11011010101010000"),
-        (25, "10100101010001010"),
-        (26, "110110101010101101"),
-        (27, "101001010101110110"),
-        (28, "101001010100010110"),
-        (29, "1101101010101011101"),
-        (30, "1101101010101010000"),
-        (31, "1010010101011100000"),
-        (32, "1010010101011011100"),
-        (33, "1010010101000011010"),
-        (34, "1010010101000010111"),
-        (35, "11011010101010111000"),
-        (36, "11011010101010110000"),
-        (37, "11011010101010101110"),
-        (38, "11011010101010100110"),
-        (39, "11011010101010101010"),
-        (40, "1010010101000001001"),
-        (41, "1010010101000001011"),
-        (42, "1010010101000011011"),
-        (43, "1010010101011100100"),
-        (44, "1010010101011011111"),
-        (45, "1010010101011100101"),
-        (46, "1010010101011011110"),
-        (47, "1010010101011010101"),
-        (48, "1010010101011010011"),
-        (49, "1010010101011011010"),
-        (50, "1010010101011010100"),
-        (51, "1010010101011010110"),
-        (52, "1010010101011011000"),
-        (53, "1010010101011010001"),
-        (54, "1010010101011100001"),
-        (55, "1010010101000010001"),
-        (56, "1010010101000011001"),
-        (57, "1010010101000001101"),
-        (58, "1010010101000010011"),
-        (59, "1010010101000001110"),
-        (60, "1010010101000011101"),
-        (61, "1010010101000011110"),
-        (62, "1010010101000101110"),
-        (63, "1010010101011011001"),
-        (64, "1010010101011011011"),
-        (65, "1010010101011010111"),
-        (66, "1010010101011010000"),
-        (67, "1010010101000010010"),
-        (68, "1010010101000001100"),
-        (69, "11011010101010110001"),
-        (70, "11011010101010101001"),
-        (71, "11011010101010110010"),
-        (72, "11011010101010101011"),
-        (73, "11011010101010100101"),
-        (74, "11011010101010001110"),
-        (75, "11011010101010001000"),
-        (76, "11011010101010100010"),
-        (77, "10100101010111101000"),
-        (78, "11011010101010001100"),
-        (79, "11011010101010100111"),
-        (80, "11011010101010001001"),
-        (81, "10100101010111000110"),
-        (82, "10100101010111011100"),
-        (83, "10100101010111100011"),
-        (84, "11011010101010001101"),
-        (85, "11011010101010100011"),
-        (86, "10100101010111011101"),
-        (87, "10100101010111101010"),
-        (88, "10100101010111100001"),
-        (89, "10100101010111001100"),
-        (90, "10100101010111101111"),
-        (91, "10100101010111011110"),
-        (92, "10100101010111001101"),
-        (93, "10100101010111101100"),
-        (94, "10100101010111101101"),
-        (95, "10100101010111100000"),
-        (96, "10100101010111100010"),
-        (97, "10100101010110111010"),
-        (98, "10100101010110100100"),
-        (99, "10100101010000111001"),
-        (100, "10100101010000101101"),
-        (101, "10100101010000101100"),
-        (102, "10100101010000010001"),
-        (103, "110110101010101011110"),
-        (104, "110110101010101001000"),
-        (105, "110110101010101011111"),
-        (106, "110110101010101110010"),
-        (107, "110110101010101100110"),
-        (108, "110110101010100010100"),
-        (109, "110110101010101001001"),
-        (110, "101001010101111010111"),
-        (111, "101001010101110111111"),
-        (112, "110110101010100010101"),
-        (113, "101001010101101001010"),
-        (114, "101001010101110001110"),
-        (115, "101001010100001111100"),
-        (116, "101001010100000101001"),
-        (117, "101001010101101001011"),
-        (118, "101001010100000101011"),
-        (119, "101001010100000100000"),
-        (120, "1101101010101011100110"),
-        (121, "1101101010101010100000"),
-        (122, "1010010101011110111010"),
-        (123, "1101101010101011100111"),
-        (124, "1010010101011110100111"),
-        (125, "1010010101011110100110"),
-        (126, "1010010101000011111111"),
-        (127, "1010010101000011111110"),
-        (128, "1010010101011100010110"),
-        (129, "1010010101011100010111"),
-        (130, "1010010101011110101101"),
-        (131, "1010010101011100011110"),
-        (132, "1010010101000011100001"),
-        (133, "11011010101010110011111"),
-        (134, "1010010101000011100010"),
-        (135, "11011010101010001111000"),
-        (136, "1010010101000001000010"),
-        (137, "1010010101000001010001"),
-        (138, "11011010101010110011101"),
-        (139, "11011010101010110011110"),
-        (140, "1010010101000011100000"),
-        (141, "11011010101010001111001"),
-        (142, "10100101010111000111110"),
-        (143, "10100101010111101011000"),
-        (144, "1010010101000010000100"),
-        (145, "10100101010111101110110"),
-        (146, "10100101010110111011010"),
-        (147, "10100101010110111011000"),
-        (148, "10100101010000111111011"),
-        (149, "10100101010000111000110"),
-        (150, "10100101010001011110110"),
-        (151, "10100101010000100000101"),
-        (152, "110110101010100011111100"),
-        (153, "10100101010110111011111"),
-        (154, "10100101010000100000110"),
-        (155, "10100101010000010100001"),
-        (156, "10100101010000010101000"),
-        (157, "101001010101111011100101"),
-        (158, "10100101010000111111010"),
-        (159, "10100101010000010000111"),
-        (160, "10100101010000010100000"),
-        (161, "10100101010000100000100"),
-        (162, "11011010101010001111111"),
-        (163, "101001010101111011100111"),
-        (164, "101001010101111011101110"),
-        (165, "10100101010110111011110"),
-        (166, "110110101010101100111001"),
-        (167, "10100101010001011110101"),
-        (168, "10100101010000100000000"),
-        (169, "10100101010001011110111"),
-        (170, "10100101010000100000011"),
-        (171, "10100101010000100000010"),
-        (172, "110110101010100011111101"),
-        (173, "10100101010000100001111"),
-        (174, "10100101010000100000001"),
-        (175, "10100101010000100001100"),
-        (176, "10100101010001011110100"),
-        (177, "10100101010000100001101"),
-        (178, "10100101010000100001110"),
-        (179, "101001010101111011101111"),
-        (180, "110110101010100011111001"),
-        (181, "110110101010101100111000"),
-        (182, "101001010101110111110101"),
-        (183, "10100101010000010000110"),
-        (184, "110110101010100011111000"),
-        (185, "10100101010000100001011"),
-        (186, "10100101010000010101011"),
-        (187, "101001010100000101010010"),
-        (188, "10100101010000111111001"),
-        (189, "10100101010000111111000"),
-        (190, "101001010101111011100110"),
-        (191, "101001010101101110110110"),
-        (192, "1010010101011011101101110"),
-        (193, "101001010100000101010011"),
-        (194, "101001010101110111110100"),
-        (195, "1010010101011011101101111"),
-        (196, "101001010101110001111110"),
-        (197, "101001010101110001111111"),
-        (198, "101001010101111011100100"),
-        (199, "101001010100001110001110"),
-        (200, "101001010100001110001111"),
-        (201, "101001010101111010110011"),
-        (202, "10100101010000100001010"),
-        (203, "10100101010000100000111"),
-        (204, "10100101010110111011001"),
-        (205, "10100101010000010101010"),
-        (206, "10100101010111011111011"),
-        (207, "101001010101111010110010"),
-        (208, "10100101010111101110001"),
-        (209, "10100101010111011111000"),
-        (210, "10100101010111011111001"),
-        (211, "11011010101010101000011"),
-        (212, "11011010101010101000010"),
-        (213, "10100101010111101110000"),
-        (214, "11011010101010001111101"),
-        (215, "1010010101011011101110"),
-        (216, "1101101010101000111101"),
-        (217, "101001010100001111101"),
-        (218, "101001010100010111100"),
-        (219, "101001010101110001010"),
-        (220, "101001010101111010010"),
-        (221, "110110101010101010001"),
-        (222, "10100101010001011111"),
-        (223, "10100101010111000100"),
-        (224, "11011010101010001011"),
-        (225, "1010010101000001111"),
-        (226, "1010010101000011000"),
-        (227, "1010010101011100111"),
-        (228, "1101101010101010110"),
-        (229, "101001010100001010"),
-        (230, "101001010101111001"),
-        (231, "110110101010101111"),
-        (232, "10100101010111010"),
-        (233, "1010010101000000"),
-        (234, "1010010101011111"),
-        (235, "101001010100011"),
-        (236, "110110101010110"),
-        (237, "11011010101000"),
-        (238, "1010010101001"),
-        (239, "000010101010"),
-        (240, "110110101011"),
-        (241, "10100101011"),
-        (242, "0000101011"),
-        (243, "000010100"),
-        (244, "110110100"),
-        (245, "10100100"),
-        (246, "0000100"),
-        (247, "1101100"),
-        (248, "101000"),
-        (249, "00000"),
-        (250, "00110"),
-        (251, "10101"),
-        (252, "0001"),
-        (253, "1011"),
-        (254, "1110"),
-        (255, "010"),
-    ]);
-
-    let mut code: [Vec<bool>; 256] = array_init::array_init(|_| vec![true; 256]);
-    for ind in 0..=255 {
-        let mut vec: Vec<bool> = Vec::new();
-        for char in code_raw.get(&ind).unwrap().chars() {
-            match char {
-                '1' => vec.push(true),
-                '0' => vec.push(false),
-                _ => unreachable!("The huffman coding consists of only '0' and '1'")
-            }
-        }
-        code[ind as usize] = vec;
-    }
-
-    code
-}
+const H000: [bool; 1] = [true];
+const H001: [bool; 4] = [false, true, true, true];
+const H002: [bool; 4] = [true, true, true, true];
+const H003: [bool; 4] = [true, true, false, false];
+const H004: [bool; 4] = [false, false, true, false];
+const H005: [bool; 5] = [true, true, false, true, false];
+const H006: [bool; 5] = [false, false, true, true, true];
+const H007: [bool; 6] = [true, true, false, true, true, true];
+const H008: [bool; 6] = [false, false, false, false, true, true];
+const H009: [bool; 7] = [true, false, true, false, false, true, true];
+const H010: [bool; 8] = [true, true, false, true, true, false, true, true];
+const H011: [bool; 8] = [false, false, false, false, true, false, true, true];
+const H012: [bool; 9] = [true, false, true, false, false, true, false, true, true];
+const H013: [bool; 10] = [true, true, false, true, true, false, true, false, true, true];
+const H014: [bool; 10] = [true, false, true, false, false, true, false, true, false, false];
+const H015: [bool; 11] = [true, true, false, true, true, false, true, false, true, false, false];
+const H016: [bool; 11] = [false, false, false, false, true, false, true, false, true, false, false];
+const H017: [bool; 12] = [false, false, false, false, true, false, true, false, true, false, true, true];
+const H018: [bool; 13] = [true, false, true, false, false, true, false, true, false, true, false, true, false];
+const H019: [bool; 14] = [true, true, false, true, true, false, true, false, true, false, true, false, false, true];
+const H020: [bool; 15] = [true, true, false, true, true, false, true, false, true, false, true, false, true, true, true];
+const H021: [bool; 15] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, false];
+const H022: [bool; 16] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, true];
+const H023: [bool; 16] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, false];
+const H024: [bool; 17] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, false];
+const H025: [bool; 17] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, false];
+const H026: [bool; 18] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, true];
+const H027: [bool; 18] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, false];
+const H028: [bool; 18] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, true, false];
+const H029: [bool; 19] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, true, false, true];
+const H030: [bool; 19] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, false, false, false];
+const H031: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, false, false];
+const H032: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, false];
+const H033: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, false, true, false];
+const H034: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, true, true, true];
+const H035: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, true, false, false, false];
+const H036: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, false, false];
+const H037: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, true, true, false];
+const H038: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, false, true, true, false];
+const H039: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false];
+const H040: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, false, true];
+const H041: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, true];
+const H042: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, false, true, true];
+const H043: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, true, false, false];
+const H044: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, true, true];
+const H045: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, true, false, true];
+const H046: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, true, false];
+const H047: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, true, false, true];
+const H048: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, false, true, true];
+const H049: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, false, true, false];
+const H050: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, true, false, false];
+const H051: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, true, true, false];
+const H052: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, false, false, false];
+const H053: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, false, false, true];
+const H054: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, false, true];
+const H055: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, true];
+const H056: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, false, false, true];
+const H057: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, true, false, true];
+const H058: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, true, true];
+const H059: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, true, true, false];
+const H060: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, false, true];
+const H061: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, false];
+const H062: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, true, true, false];
+const H063: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, false, false, true];
+const H064: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, false, true, true];
+const H065: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, true, true, true];
+const H066: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, false, false, false];
+const H067: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, true, false];
+const H068: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, true, false, false];
+const H069: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, false, true];
+const H070: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, false, false, true];
+const H071: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, true, false];
+const H072: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, true];
+const H073: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, false, true, false, true];
+const H074: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, false];
+const H075: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, false, false, false];
+const H076: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, false, false, true, false];
+const H077: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, false, false];
+const H078: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, false, false];
+const H079: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, false, true, true, true];
+const H080: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, false, false, true];
+const H081: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, true, false];
+const H082: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, false, false];
+const H083: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, false, false, true, true];
+const H084: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, false, true];
+const H085: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, false, false, true, true];
+const H086: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, false, true];
+const H087: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, true, false];
+const H088: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, false, false, false, true];
+const H089: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, true, true, false, false];
+const H090: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, true];
+const H091: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, true, false];
+const H092: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, true, true, false, true];
+const H093: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, false, false];
+const H094: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, false, true];
+const H095: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, false, false, false, false];
+const H096: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, false, false, true, false];
+const H097: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, false];
+const H098: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, false, true, false, false];
+const H099: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, false, false, true];
+const H100: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, true, true, false, true];
+const H101: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, true, true, false, false];
+const H102: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, false, false, true];
+const H103: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, true, true, true, false];
+const H104: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, false, true, false, false, false];
+const H105: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, true, true, true, true];
+const H106: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, true, false, false, true, false];
+const H107: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, true, true, false];
+const H108: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, false, true, false, false];
+const H109: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, false, true, false, false, true];
+const H110: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, true, true, true];
+const H111: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, true, true, true];
+const H112: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, false, true, false, true];
+const H113: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, false, true, false, true, false];
+const H114: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, true, true, false];
+const H115: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, true, false, false];
+const H116: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, false, true];
+const H117: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, false, false, true, false, true, true];
+const H118: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, true, true];
+const H119: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, false, false, false, false];
+const H120: [bool; 22] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, true, false, false, true, true, false];
+const H121: [bool; 22] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, false, false, false, false, false];
+const H122: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, true, false];
+const H123: [bool; 22] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, true, false, false, true, true, true];
+const H124: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, false, true, true, true];
+const H125: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, false, true, true, false];
+const H126: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, true, true, true, true];
+const H127: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, true, true, true, false];
+const H128: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, false, true, true, false];
+const H129: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, false, true, true, true];
+const H130: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, true, true, false, true];
+const H131: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, true, true, true, false];
+const H132: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, false, false, false, false, true];
+const H133: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, true, true, true, true, true];
+const H134: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, false, false, false, true, false];
+const H135: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, false, false, false];
+const H136: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, false, false, false, true, false];
+const H137: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, false, false, true];
+const H138: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, true, true, true, false, true];
+const H139: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, true, true, true, true, false];
+const H140: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, false, false, false, false, false];
+const H141: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, false, false, true];
+const H142: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, true, true, true, true, false];
+const H143: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, true, true, false, false, false];
+const H144: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, true, false, false];
+const H145: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, true, true, false];
+const H146: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, false, true, false];
+const H147: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, false, false, false];
+const H148: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, true, true, false, true, true];
+const H149: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, false, false, false, true, true, false];
+const H150: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, true, true, true, false, true, true, false];
+const H151: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, false, true, false, true];
+const H152: [bool; 24] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, true, true, false, false];
+const H153: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, true, true, true];
+const H154: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, false, true, true, false];
+const H155: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, false, false, false, true];
+const H156: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, true, false, false, false];
+const H157: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, false, true, false, true];
+const H158: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, true, true, false, true, false];
+const H159: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, false, false, false, true, true, true];
+const H160: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, false, false, false, false];
+const H161: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, false, true, false, false];
+const H162: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, true, true, true];
+const H163: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, false, true, true, true];
+const H164: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, true, true, true, false];
+const H165: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, true, true, false];
+const H166: [bool; 24] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, true, true, true, false, false, true];
+const H167: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, true, true, true, false, true, false, true];
+const H168: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, false, false, false, false];
+const H169: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, true, true, true, false, true, true, true];
+const H170: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, false, false, true, true];
+const H171: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, false, false, true, false];
+const H172: [bool; 24] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, true, true, false, true];
+const H173: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, true, true, true, true];
+const H174: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, false, false, false, true];
+const H175: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, true, true, false, false];
+const H176: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, true, true, true, false, true, false, false];
+const H177: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, true, true, false, true];
+const H178: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, true, true, true, false];
+const H179: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, true, true, true, true];
+const H180: [bool; 24] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, true, false, false, true];
+const H181: [bool; 24] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, false, false, true, true, true, false, false, false];
+const H182: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, true, true, false, true, false, true];
+const H183: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, false, false, false, true, true, false];
+const H184: [bool; 24] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, true, false, false, false];
+const H185: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, true, false, true, true];
+const H186: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, true, false, true, true];
+const H187: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, true, false, false, true, false];
+const H188: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, true, true, false, false, true];
+const H189: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, true, true, false, false, false];
+const H190: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, false, true, true, false];
+const H191: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, false, true, true, false];
+const H192: [bool; 25] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, false, true, true, true, false];
+const H193: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, true, false, false, true, true];
+const H194: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, true, true, false, true, false, false];
+const H195: [bool; 25] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, false, true, true, true, true];
+const H196: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, true, true, true, true, true, false];
+const H197: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, true, true, true, true, true, true];
+const H198: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, false, true, false, false];
+const H199: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, false, false, false, true, true, true, false];
+const H200: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, false, false, false, true, true, true, true];
+const H201: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, true, true, false, false, true, true];
+const H202: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, true, false, true, false];
+const H203: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, false, false, false, false, true, true, true];
+const H204: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, false, false, true];
+const H205: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, false, true, false, true, false, true, false];
+const H206: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, true, true, false, true, true];
+const H207: [bool; 24] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, true, true, false, false, true, false];
+const H208: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, false, false, true];
+const H209: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, true, true, false, false, false];
+const H210: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, true, true, true, true, false, false, true];
+const H211: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, false, false, false, false, true, true];
+const H212: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, false, false, false, false, true, false];
+const H213: [bool; 23] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, true, true, false, false, false, false];
+const H214: [bool; 23] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, true, false, true];
+const H215: [bool; 22] = [true, false, true, false, false, true, false, true, false, true, false, true, true, false, true, true, true, false, true, true, true, false];
+const H216: [bool; 22] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, true, true, true, false, true];
+const H217: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, true, true, true, false, true];
+const H218: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, true, true, true, false, false];
+const H219: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, false, true, false];
+const H220: [bool; 21] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, true, false, false, true, false];
+const H221: [bool; 21] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, false, false, false, true];
+const H222: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, false, true, true, true, true, true];
+const H223: [bool; 20] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, false, true, false, false];
+const H224: [bool; 20] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, false, false, true, false, true, true];
+const H225: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, true, true, true, true];
+const H226: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, true, false, false, false];
+const H227: [bool; 19] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, false, true, true, true];
+const H228: [bool; 19] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, false, true, true, false];
+const H229: [bool; 18] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, true, false, true, false];
+const H230: [bool; 18] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, false, false, true];
+const H231: [bool; 18] = [true, true, false, true, true, false, true, false, true, false, true, false, true, false, true, true, true, true];
+const H232: [bool; 17] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, false, true, false];
+const H233: [bool; 16] = [true, false, true, false, false, true, false, true, false, true, false, false, false, false, false, false];
+const H234: [bool; 16] = [true, false, true, false, false, true, false, true, false, true, false, true, true, true, true, true];
+const H235: [bool; 15] = [true, false, true, false, false, true, false, true, false, true, false, false, false, true, true];
+const H236: [bool; 15] = [true, true, false, true, true, false, true, false, true, false, true, false, true, true, false];
+const H237: [bool; 14] = [true, true, false, true, true, false, true, false, true, false, true, false, false, false];
+const H238: [bool; 13] = [true, false, true, false, false, true, false, true, false, true, false, false, true];
+const H239: [bool; 12] = [false, false, false, false, true, false, true, false, true, false, true, false];
+const H240: [bool; 12] = [true, true, false, true, true, false, true, false, true, false, true, true];
+const H241: [bool; 11] = [true, false, true, false, false, true, false, true, false, true, true];
+const H242: [bool; 10] = [false, false, false, false, true, false, true, false, true, true];
+const H243: [bool; 9] = [false, false, false, false, true, false, true, false, false];
+const H244: [bool; 9] = [true, true, false, true, true, false, true, false, false];
+const H245: [bool; 8] = [true, false, true, false, false, true, false, false];
+const H246: [bool; 7] = [false, false, false, false, true, false, false];
+const H247: [bool; 7] = [true, true, false, true, true, false, false];
+const H248: [bool; 6] = [true, false, true, false, false, false];
+const H249: [bool; 5] = [false, false, false, false, false];
+const H250: [bool; 5] = [false, false, true, true, false];
+const H251: [bool; 5] = [true, false, true, false, true];
+const H252: [bool; 4] = [false, false, false, true];
+const H253: [bool; 4] = [true, false, true, true];
+const H254: [bool; 4] = [true, true, true, false];
+const H255: [bool; 4] = [false, true, false, true];
+pub const HUFFMAN: [&[bool]; 256] = [&H000, &H001, &H002, &H003, &H004, &H005, &H006, &H007, &H008, &H009, &H010, &H011, &H012, &H013, &H014, &H015, &H016, &H017, &H018, &H019, &H020, &H021, &H022, &H023, &H024, &H025, &H026, &H027, &H028, &H029, &H030, &H031, &H032, &H033, &H034, &H035, &H036, &H037, &H038, &H039, &H040, &H041, &H042, &H043, &H044, &H045, &H046, &H047, &H048, &H049, &H050, &H051, &H052, &H053, &H054, &H055, &H056, &H057, &H058, &H059, &H060, &H061, &H062, &H063, &H064, &H065, &H066, &H067, &H068, &H069, &H070, &H071, &H072, &H073, &H074, &H075, &H076, &H077, &H078, &H079, &H080, &H081, &H082, &H083, &H084, &H085, &H086, &H087, &H088, &H089, &H090, &H091, &H092, &H093, &H094, &H095, &H096, &H097, &H098, &H099, &H100, &H101, &H102, &H103, &H104, &H105, &H106, &H107, &H108, &H109, &H110, &H111, &H112, &H113, &H114, &H115, &H116, &H117, &H118, &H119, &H120, &H121, &H122, &H123, &H124, &H125, &H126, &H127, &H128, &H129, &H130, &H131, &H132, &H133, &H134, &H135, &H136, &H137, &H138, &H139, &H140, &H141, &H142, &H143, &H144, &H145, &H146, &H147, &H148, &H149, &H150, &H151, &H152, &H153, &H154, &H155, &H156, &H157, &H158, &H159, &H160, &H161, &H162, &H163, &H164, &H165, &H166, &H167, &H168, &H169, &H170, &H171, &H172, &H173, &H174, &H175, &H176, &H177, &H178, &H179, &H180, &H181, &H182, &H183, &H184, &H185, &H186, &H187, &H188, &H189, &H190, &H191, &H192, &H193, &H194, &H195, &H196, &H197, &H198, &H199, &H200, &H201, &H202, &H203, &H204, &H205, &H206, &H207, &H208, &H209, &H210, &H211, &H212, &H213, &H214, &H215, &H216, &H217, &H218, &H219, &H220, &H221, &H222, &H223, &H224, &H225, &H226, &H227, &H228, &H229, &H230, &H231, &H232, &H233, &H234, &H235, &H236, &H237, &H238, &H239, &H240, &H241, &H242, &H243, &H244, &H245, &H246, &H247, &H248, &H249, &H250, &H251, &H252, &H253, &H254, &H255];

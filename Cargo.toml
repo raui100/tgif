@@ -15,3 +15,5 @@ ndarray = { version = "0.15.4", features = ["rayon"]}
 rayon = "1.5.2"
 chrono = "0.4"
 array-init = "2.0.0"
+bitvec = "1"
+arrayvec = "0.7.2"

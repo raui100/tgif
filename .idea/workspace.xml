@@ -4,17 +4,16 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8287e557-7953-457b-940a-8861dc9112df" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/image-000175.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/png_to.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/args.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/code.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/decode.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tgif.iml" afterDir="false" />
+    <list default="true" id="8287e557-7953-457b-940a-8861dc9112df" name="Changes" comment="Improved performance for encoder and added a row seperator">
+      <change afterPath="$PROJECT_DIR$/assets/png_to.tgif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/tgif_to.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/code2.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/png_to.jpeg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/code.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/code.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,17 +44,17 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_ADD_EXTERNAL_FILES": "true",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "last_opened_file_path": "/home/private/dev/rust/tgif",
-    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
-    "settings.editor.selected.configurable": "preferences.keymap"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/private/dev/rust/tgif&quot;,
+    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -81,7 +80,7 @@
       </method>
     </configuration>
     <configuration name="Run" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-      <option name="command" value="run --package tgif --bin tgif -- --src ./assets/image-000175.png --dst ./assets/png_to.jpeg" />
+      <option name="command" value="run --package tgif --bin tgif -- --src ./assets/image-000175.png --dst ./assets/png_to.tgif" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
@@ -97,6 +96,10 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
+    <list>
+      <item itemvalue="Cargo.Run" />
+      <item itemvalue="Cargo.Expand tgif::code" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Cargo.Expand tgif::code" />
@@ -116,6 +119,21 @@
       <option name="presentableId" value="Default" />
       <updated>1652211126534</updated>
     </task>
+    <task id="LOCAL-00001" summary="Status qou">
+      <created>1652295858288</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1652295858288</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Improved performance for encoder and added a row seperator">
+      <created>1652390658282</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1652390658282</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -131,5 +149,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+    <MESSAGE value="Status qou" />
+    <MESSAGE value="Improved performance for encoder and added a row seperator" />
+    <option name="LAST_COMMIT_MESSAGE" value="Improved performance for encoder and added a row seperator" />
   </component>
 </project>
