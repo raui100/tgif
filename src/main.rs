@@ -35,7 +35,7 @@ fn main() {
                 record.args()
             )
         })
-        .filter(Some("tgif"), LevelFilter::Debug)
+        .filter(Some("tgif"), LevelFilter::Trace)
         .init();
 
     // Use this to artificially reduce the numbers of used CPU threads
