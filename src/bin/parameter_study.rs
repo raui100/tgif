@@ -77,15 +77,19 @@ fn compress(file: &Image, par: &Parameter) -> Score {
     assert!([0, 8].contains(&par.raw), "Raw pixel can either be represented or not have 0 or 8 bits");
     assert!((par.delta == 8) || (par.raw == 8), "Either delta or raw must have 8 bit so that every pixel can be represented");
 
+    // 1..4097 can be used by RLE
+    // 4097...8192 can be used by delta - it will never use more than 4096..4351 though (255 values for u8)
+    // 8182..16_384 can be used by raw pixel - it will never use more than 8_192..8_447 though (255 values for u8)
     let (prefix_rle, prefix_delta, prefix_raw) = match (par.rle > 0, par.delta > 0, par.raw > 0) {
-        (false, false, true) => (0_u32, 0_u32, 0_u32),
-        (false, true, false) => (0, 0, 0),
-        (false, true, true) => (0, 0, 0),
-        (true, false, true) => (2_u32.pow(par.rle as u32), 0, 2_u32.pow(par.raw as u32)),
-        (true, true, false) => (2_u32.pow(par.rle as u32), 2_u32.pow(par.delta as u32), 0),
-        (true, true, true) => (2_u32.pow(par.rle as u32), 2_u32.pow(par.delta as u32 + 1), 2_u32.pow(par.raw as u32 + 2)),
+        (false, false, true) => (None, None, Some(2_u32.pow(13))),
+        (false, true, false) => (None, Some(2_u32.pow(12) + 1), None),
+        (false, true, true) => (None, Some(2_u32.pow(12) + 1), Some(2_u32.pow(13))),
+        (true, false, true) => (Some(0_u32), None, Some(2_u32.pow(13))),
+        (true, true, false) => (Some(0), Some(2_u32.pow(12) + 1), None),
+        (true, true, true) => (Some(0), Some(2_u32.pow(12) + 1), Some(2_u32.pow(13))),
         _ => unreachable!("Can't be reached due to assert above"),
     };
+    let (prefix_rle, prefix_delta, prefix_raw) = (prefix_rle.unwrap(), prefix_delta.unwrap(), prefix_raw.unwrap());
     // With 1 bit we can represent [1, 2].
     let rle_max: u32 = 2_u32.pow(par.rle as u32);
 
@@ -209,7 +213,7 @@ fn main() {
         .map(|result| result.unwrap())
         .collect();
 
-    let rle = 0..=32;  // RLE encoding can have 0 to 16 bits
+    let rle = 0..=12;  // RLE encoding can have 0 to 12 bits (=4096). This is enough to encode a whole row/column
     let delta = 0..=8;  // Delta can have 0 to 8 bits
     let raw = [0, 8];  // Raw pixel are either represented fully or not (=0 bits)
     let directions: [Direction; 2] = [Direction::RowWise, Direction::ColumnWise];  // The image can be compressed row by row or column by column
@@ -220,7 +224,7 @@ fn main() {
         .collect();
 
     // Preparing the results file
-    std::fs::remove_file("results.csv").unwrap();
+    let _ = std::fs::remove_file("results.csv");
     File::create("results.csv").expect("Unable to create file");
     let mut file = std::fs::OpenOptions::new()
         .write(true)
