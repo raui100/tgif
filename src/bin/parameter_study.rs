@@ -89,7 +89,9 @@ fn compress(file: &Image, par: &Parameter) -> Score {
         (true, true, true) => (Some(0), Some(2_u32.pow(12) + 1), Some(2_u32.pow(13))),
         _ => unreachable!("Can't be reached due to assert above"),
     };
-    let (prefix_rle, prefix_delta, prefix_raw) = (prefix_rle.unwrap(), prefix_delta.unwrap(), prefix_raw.unwrap());
+    let prefix_rle = prefix_rle.unwrap_or(0);
+    let prefix_delta = prefix_delta.unwrap_or(0);
+    let prefix_raw = prefix_raw.unwrap_or(0);
     // With 1 bit we can represent [1, 2].
     let rle_max: u32 = 2_u32.pow(par.rle as u32);
 
@@ -235,7 +237,7 @@ fn main() {
 
     let mut index: u32 = 0;
     for path in images.iter() {
-        println!("Processing image: {:?}", &path);
+        println!("[{:.1?}] - Processing image: {:?}", current.elapsed(), &path);
         let image = Image {
             path: path.clone(),
             size: std::fs::metadata(path.clone()).unwrap().len(),
