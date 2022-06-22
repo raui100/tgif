@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 fn main() {
     let number: i32 = 2;
     let width = 5;

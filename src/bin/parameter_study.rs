@@ -5,7 +5,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use bit_vec;
 use glob::glob;
 use huffman_compress::CodeBuilder;
 use ndarray::{Array2, Axis};
@@ -79,12 +78,12 @@ fn compress(file: &Image, par: &Parameter) -> Score {
     // 4097...8192 can be used by delta - it will never use more than 4096..4351 though (255 values for u8)
     // 8182..16_384 can be used by raw pixel - it will never use more than 8_192..8_447 though (255 values for u8)
     let (prefix_rle, prefix_delta, prefix_raw) = match (par.rle > 0, par.delta > 0, par.raw > 0) {
-        (false, false, true) => (None, None, Some(2_u32.pow(13))),
-        (false, true, false) => (None, Some(2_u32.pow(12) + 1), None),
-        (false, true, true) => (None, Some(2_u32.pow(12) + 1), Some(2_u32.pow(13))),
-        (true, false, true) => (Some(0_u32), None, Some(2_u32.pow(13))),
-        (true, true, false) => (Some(0), Some(2_u32.pow(12) + 1), None),
-        (true, true, true) => (Some(0), Some(2_u32.pow(12) + 1), Some(2_u32.pow(13))),
+        (false, false, true) => (None, None, Some(2u32.pow(13))),
+        (false, true, false) => (None, Some(2u32.pow(12) + 1), None),
+        (false, true, true) => (None, Some(2u32.pow(12) + 1), Some(2u32.pow(13))),
+        (true, false, true) => (Some(0u32), None, Some(2u32.pow(13))),
+        (true, true, false) => (Some(0), Some(2u32.pow(12) + 1), None),
+        (true, true, true) => (Some(0), Some(2u32.pow(12) + 1), Some(2u32.pow(13))),
         _ => unreachable!("Can't be reached due to assert above"),
     };
     let prefix_rle = prefix_rle.unwrap_or(0);
@@ -97,10 +96,10 @@ fn compress(file: &Image, par: &Parameter) -> Score {
     let delta_vec: Vec<u8> = match par.rle > 0 {
         // If we use 1 or more bits for RLE, delta doesn't have to represent "0"
         // With 1 bit we can represent [-1, 1] -> [255, 1] in u8
-        true => (-2_i32.pow(par.delta as u32)..2_i32.pow(par.delta as u32)).map(|n| ((n + 256) % 256) as u8).filter(|n| n != &0).collect(),
+        true => (-(2_i32.pow(par.delta as u32))..2_i32.pow(par.delta as u32)).map(|n| ((n + 256) % 256) as u8).filter(|n| n != &0).collect(),
         // If there is no RLE we have to represent the "0" if necessary
         // With 1 bit we can represent [-1, 0] -> [255, 0] in u8
-        false => (-2_i32.pow(par.delta as u32)..2_i32.pow(par.delta as u32) - 1).map(|n| ((n + 256) % 256) as u8).collect(),
+        false => (-(2_i32.pow(par.delta as u32))..2_i32.pow(par.delta as u32) - 1).map(|n| ((n + 256) % 256) as u8).collect(),
     };
 
     let axis = match par.direction {

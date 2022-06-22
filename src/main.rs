@@ -109,7 +109,6 @@ fn main() {
             }
 
             enc_u8
-
         })
         .collect_into_vec(&mut enc);
 
@@ -119,13 +118,13 @@ fn main() {
     // 2. The image width as u32
     // 3. The image height as u32
     // The Huffman encoding schema is fixed
-    let header: Vec<u8> = [u32::from_be_bytes(*b"TGIF"), (image.shape()[1] as u32), (image.shape()[0] as u32)].into_iter().flat_map(| v | v.to_be_bytes()).collect();
+    let header: Vec<u8> = [u32::from_be_bytes(*b"TGIF"), (image.shape()[1] as u32), (image.shape()[0] as u32)].into_iter().flat_map(|v| v.to_be_bytes()).collect();
 
     debug!("Writing the image tof disk");
     let mut file = std::fs::File::create(args.dst).expect("Failed creating destination file");
     file.write_all(&header).expect("Failed writing image header to disk");
     for row in enc.iter() {
-        file.write_all(&row).expect("Failed writing image data to disk");
+        file.write_all(row).expect("Failed writing image data to disk");
     }
 
     debug!("Finished encoding to TGIF");
