@@ -12,7 +12,6 @@ use ndarray::{Array2, Axis};
 use nshare::ToNdarray2;
 use rayon::prelude::*;
 
-#[allow(unused, unused_variables)]
 /// Counts the number of occurrences of each entry in the iterator
 ///
 /// # Examples
@@ -21,15 +20,14 @@ use rayon::prelude::*;
 /// let result = HashMap::from([('a', 2), ('b', 1)]);
 /// assert_eq!(result, count_frequency(&input.chars()))
 /// ```
-fn count_frequency<I, K>(iter: &I) -> HashMap<K, usize>
+fn count_frequency<I, K>(iter: I) -> HashMap<K, usize>
     where
-        I: IntoIterator + IntoIterator<Item=K> + Clone,
+        I: IntoIterator<Item=K>,
         K: Eq + Hash,
 {
     let mut frequency: HashMap<K, usize> = HashMap::new();
-    for item in iter.clone().into_iter() {
-        let count = frequency.entry(item).or_insert(0);
-        *count += 1;
+    for item in iter {
+        *frequency.entry(item).or_insert(0) += 1;
     }
 
     frequency
@@ -37,9 +35,9 @@ fn count_frequency<I, K>(iter: &I) -> HashMap<K, usize>
 
 #[test]
 fn test_count_freq() {
-    let input = "aab";
+    let input = ['a', 'a', 'b'];
     let result = HashMap::from([('a', 2), ('b', 1)]);
-    assert_eq!(result, count_frequency(&input.chars()))
+    assert_eq!(result, count_frequency(input))
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -177,7 +175,7 @@ fn compress(file: &Image, par: &Parameter) -> Score {
         }
     }
 
-    let freq = count_frequency(&encoded);
+    let freq = count_frequency(encoded.clone());
     let (book, _) = CodeBuilder::from_iter(freq).finish();
     let mut compressed = bit_vec::BitVec::new();
     for number in encoded {
