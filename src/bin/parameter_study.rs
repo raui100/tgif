@@ -247,7 +247,7 @@ fn main() {
         };
         let scores: Vec<Score> = parameters.par_iter().map(|par| compress(&image, par)).collect();
         for score in scores {
-            let out = format!("{},{},{},{},{:.3},{:.3},{},{},{},{:?}\n",
+            let out = format!("{},{},{},{},{},{},{},{},{},{:?}\n",
                               index,
                               score.file_name,
                               score.dataset,
