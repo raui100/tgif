@@ -230,7 +230,7 @@ fn main() {
         .append(true) // This is needed to append to file
         .open("results.csv")
         .unwrap();
-    file.write_all(b"INDEX,NAME,DATASET,UNCOMPRESSED,MAX_PNG_COMPRESSED,COMPRESSION,RLE,DELTA,RAW\n").unwrap();
+    file.write_all(b"INDEX,NAME,DATASET,UNCOMPRESSED,MAX_PNG_COMPRESSED,COMPRESSION,RLE,DELTA,RAW,DIRECTION\n").unwrap();
 
     let mut index: u32 = 0;
     for path in images.iter() {
