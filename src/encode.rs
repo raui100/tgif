@@ -57,7 +57,7 @@ pub fn encode(args: &Args, parallel_units: u32, remainder_bits: u8) {
             .collect::<Vec<u8>>()
     );
 
-    debug!("Writing the image tof disk");
+    debug!("Writing the image to disk");
     let mut file = std::fs::File::create(&args.dst).expect("Failed creating destination file");
     file.write_all(&img_u8).expect("Failed writing the image to disk");
 }
@@ -103,7 +103,6 @@ fn rice_code(image: &ndarray::Array2<u8>, parallel_units: u32, remainder_bits: u
 
     // Iterating over the image
     debug!("Encoding the image as Vec<bool>");
-
     for rows in image.axis_chunks_iter(Axis(0), parallel_units as usize) {
         let mut prev_pixels = prev_pixels_reset.clone();
         for index in 0..chunk_length {

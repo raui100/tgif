@@ -30,8 +30,8 @@ fn main() {
     debug!("Parsing arguments from CLI");
     let args = args::Args::parse();
     match (args.src.extension(), args.dst.extension()) {
-        (Some("png"), Some("tgif")) => encode::encode(&args, parallel_units,remainder_bits),
-        (Some("tgif"), Some("png")) => decode::decode(&args),
+        (Some(_), Some("tgif")) => encode::encode(&args, parallel_units,remainder_bits),
+        (Some("tgif"), Some(_)) => decode::decode(&args),
         (src, dst) => {
             let src = src.unwrap();
             let dst = dst.unwrap();
