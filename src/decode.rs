@@ -25,7 +25,7 @@ impl State {
     }
 }
 
-pub fn decode(args: &Args) -> Vec<u8> {
+pub fn decode(args: &Args) {
     debug!("Reading the TGIF file from disk");
     let tgif = std::fs::read(&args.src)
         .unwrap_or_else(|_| panic!("Failed reading {}", &args.src));
@@ -54,20 +54,148 @@ pub fn decode(args: &Args) -> Vec<u8> {
             }
         };
     assert!(tgif.len() > start_index as usize);
+
+    debug!("Transforming Vec<u8> to Vec<bool>");
     let img_code_bool: Vec<bool> = tgif[start_index..]
         .iter()
         .flat_map(u8_to_array_bool)
         .collect();
 
-
-    let unordered_deltas = decode_rice(
+    debug!("Decoding Rice-code to Rice-index");
+    let unordered_rice_indices = decode_rice(
         &img_code_bool,
         (img_height * img_width) as usize,
         remainder_bits,
     );
-    assert_eq!(unordered_deltas.len(), (img_height * img_width) as usize);
 
-    todo!("Decode!")
+    debug!("Reordering the Rice-index");
+    let ordered_rice_indices = reorder_img(
+        &unordered_rice_indices,
+        parallel_units as usize,
+        img_width as usize,
+    );
+
+    debug!("Transforming the Rice-Index to deltas");
+    let deltas = reverse_rice_index(ordered_rice_indices);
+
+    debug!("Transforming the delta back to the original image");
+    let img_u8 = reverse_delta(deltas, img_width as usize);
+
+    debug!("Saving the original image to disk");
+    image::save_buffer(
+        &args.dst,
+        &img_u8,
+        img_width,
+        img_height,
+        image::ColorType::L8,
+    ).unwrap();
+
+}
+
+/// Reverse index
+fn reverse_rice_index(vec: Vec<u8>) -> Vec<u8> {
+    let mut out: Vec<u8> = Vec::with_capacity(vec.len());
+    for num in vec {
+         if (num % 2) == 0 {
+            out.push(num / 2);
+        } else {
+             // if num=255 there is an edge-case where (num + 1) would lead to an overflow
+            out.push(0_u8.wrapping_sub(((num as u16 + 1) / 2) as u8));
+        }
+    }
+    out
+}
+
+#[test]
+fn test_reverse_rice_index() {
+    let original = vec![0, 1, 255, 127, 128];
+    let rice_index = vec![0, 2, 1, 254, 255];
+    assert_eq!(reverse_rice_index(rice_index), original);
+}
+
+/// Reverses the delta calculation
+fn reverse_delta(delta: Vec<u8>, img_width: usize) -> Vec<u8> {
+    let mut img: Vec<u8> = Vec::with_capacity(delta.len());
+    let mut prev_num = 0_u8;
+    for (ind, delta) in delta.into_iter().enumerate() {
+        if ind % img_width == 0 {
+            prev_num = 0;
+        }
+        let num = prev_num.wrapping_sub(delta);
+        img.push(num);
+        prev_num = num;
+    }
+
+    img
+}
+
+#[test]
+fn test_reverse_delta() {
+    // Most simple case
+    assert_eq!(reverse_delta(vec![0], 1), vec![0]);
+
+    // Simple case with wrapping sub
+    assert_eq!(reverse_delta(vec![1], 1), vec![255]);
+
+    // Two wrapping subs
+    assert_eq!(reverse_delta(vec![255, 255], 2), vec![1, 2]);
+
+    // Not wrapping, wrapping, not wrapping, wrapping
+    assert_eq!(reverse_delta(vec![0, 1, 254, 3], 4), vec![0, 255, 1, 254]);
+
+    // Delta with reset
+    assert_eq!(reverse_delta(vec![1, 0, 3, 254], 2), vec![255, 255, 253, 255]);
+
+    // Another delta with reset
+    let original = vec![0, 0, 255, 255, 0, 0, 0, 255];
+    let delta = vec![0, 0, 1, 0, 0, 0, 0, 1];
+    assert_eq!(reverse_delta(delta, 2), original)
+}
+
+/// Reorders a vec that had been built with `parallel_units`
+fn reorder_img(img: &Vec<u8>, parallel_units: usize, img_width: usize) -> Vec<u8> {
+    let mut ordered_vec: Vec<u8> = Vec::with_capacity(img.len());
+    let row_len = parallel_units * img_width;
+    for ordered_index in 0..img.len() {
+        // Determines in which chunk of rows the index is.
+        // Is always a multiple of `img_width` (eg: [0, 1024, 2048, ...] for `img_width=1024`).
+        let chunk = (ordered_index / row_len) * row_len;
+
+        // Determines the position within a chunk of rows.
+        // Is always in 0..row_len
+        let pos = (ordered_index * parallel_units) % row_len;
+
+        // Offset of the position within a chunk of rows
+        // Is always in 0..parallel_units
+        let offset = (ordered_index / img_width) % parallel_units;
+
+        let unordered_index = chunk + pos + offset;
+        ordered_vec.push(img[unordered_index])
+    }
+
+    ordered_vec
+}
+
+#[test]
+fn test_reorder_img() {
+    // One Row
+    let ordered = vec![0, 1, 2, 3];
+    assert_eq!(reorder_img(&ordered, 1, 4), ordered);
+
+    // Two rows but `img_width=1`
+    let ordered = vec![0, 1];
+    assert_eq!(reorder_img(&ordered, 2, 1), ordered);
+
+    // // 4 rows but `img_width=1`
+    let ordered = vec![0, 1, 2, 3];
+    assert_eq!(reorder_img(&ordered, 2, 1), ordered);
+
+    let ordered = vec![0, 1, 2, 3];
+    let unordered = vec![0, 2, 1, 3];
+    assert_eq!(
+        reorder_img(&unordered, 2, 2),
+        ordered
+    )
 }
 
 fn u8_to_array_bool(num: &u8) -> [bool; 8] {
@@ -141,10 +269,8 @@ fn decode_rice(code: &[bool], number_of_pixel: usize, remainder_bits: u8) -> Vec
                     // loop manually, which is `number_of_pixel - 1` due to zero-indexing
                     if pixels == number_of_pixel {
                         return img_code_u8;
-
                     } else {
                         state = State::reset();
-
                     }
                 }
             }
@@ -173,7 +299,7 @@ fn test_decode_rice() {
         .flat_map(|v| v.clone())
         .collect();
 
-    assert_eq!(decode_rice(&code, 4, 2, ),
+    assert_eq!(decode_rice(&code, 4, 2),
                vec![0, 3, 7, 11]
     )
 }

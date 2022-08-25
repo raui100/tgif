@@ -29,7 +29,7 @@ fn main() {
 
     debug!("Parsing arguments from CLI");
     let args = args::Args::parse();
-    let img_u8 = match (args.src.extension(), args.dst.extension()) {
+    match (args.src.extension(), args.dst.extension()) {
         (Some("png"), Some("tgif")) => encode::encode(&args, parallel_units,remainder_bits),
         (Some("tgif"), Some("png")) => decode::decode(&args),
         (src, dst) => {
@@ -38,8 +38,4 @@ fn main() {
             panic!("Converting {src} to {dst} is not supported");
         }
     };
-
-    debug!("Writing the image tof disk");
-    let mut file = std::fs::File::create(args.dst).expect("Failed creating destination file");
-    file.write_all(&img_u8).expect("Failed writing the image to disk");
 }

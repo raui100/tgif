@@ -1,3 +1,4 @@
+use std::io::Write;
 use log::{debug, info};
 use ndarray::Axis;
 use nshare::ToNdarray2;
@@ -5,7 +6,7 @@ use nshare::ToNdarray2;
 use crate::args::Args;
 
 /// Encodes an image to TGIF
-pub fn encode(args: &Args, parallel_units: u32, remainder_bits: u8) -> Vec<u8> {
+pub fn encode(args: &Args, parallel_units: u32, remainder_bits: u8) {
     debug!("Reading the image from disk and converting it into an 2D ndarray");
     let image: ndarray::Array2<u8> = image::open(&args.src)
         .expect("Failed reading input file.")
@@ -56,7 +57,9 @@ pub fn encode(args: &Args, parallel_units: u32, remainder_bits: u8) -> Vec<u8> {
             .collect::<Vec<u8>>()
     );
 
-    img_u8
+    debug!("Writing the image tof disk");
+    let mut file = std::fs::File::create(&args.dst).expect("Failed creating destination file");
+    file.write_all(&img_u8).expect("Failed writing the image to disk");
 }
 
 fn rice_index(delta: u8) -> u8 {
