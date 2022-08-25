@@ -4,13 +4,10 @@ use clap::Parser;
 use log::{debug, LevelFilter};
 
 mod args;
-mod encode;
 mod decode;
+mod encode;
 
 fn main() {
-    // TODO: Move this to CLI args
-    let parallel_units = 1;
-    let remainder_bits = 2;
     // Setting up the logging environment
     env_logger::Builder::new()
         .format(move |buf, record| {
@@ -29,8 +26,21 @@ fn main() {
 
     debug!("Parsing arguments from CLI");
     let args = args::Args::parse();
+
+    debug!("Checking the arguments for completeness and correctness");
+    if args.dst.extension() == Some("tgif") { // Encoding from an image (eg: PNG, BMP, ...) to TGIF
+        check_remainder_bits_and_parallel_encoding_units(&args);
+    } else { // Encoding TGIF to a graphic format (eg: PNG, BMP, ...)
+        if args.no_header {
+            check_remainder_bits_and_parallel_encoding_units(&args);
+            assert!(args.width != None, "Please specify the image width! (eg: -w 128)");
+            assert!(args.height != None, "Please specify the image height (eg: -h 128)");
+        }
+    }
+
+    // Encoding/Decoding the image
     match (args.src.extension(), args.dst.extension()) {
-        (Some(_), Some("tgif")) => encode::encode(&args, parallel_units,remainder_bits),
+        (Some(_), Some("tgif")) => encode::encode(&args),
         (Some("tgif"), Some(_)) => decode::decode(&args),
         (src, dst) => {
             let src = src.unwrap();
@@ -38,4 +48,18 @@ fn main() {
             panic!("Converting {src} to {dst} is not supported");
         }
     };
+}
+
+fn check_remainder_bits_and_parallel_encoding_units(args: &args::Args) {
+    match args.remainder_bits {
+        None => panic!("Please specify the number bits used for the remainder (eg: ... -r 2)"),
+        Some(bits) if bits >= 8 => panic!("Please specify less than 8 bits for the remainder (eg: ... -r 2)"),
+        _ => (),  // Everything looks fine!
+    }
+
+    match args.parallel_encoding_units {
+        None => panic!("Please specify the number of parallel encoding units (eg: ... -p 1)"),
+        Some(0) => panic!("The number of parallel encoding units must be greater than zero (eg: ... -p 1)"),
+        _ => (),  // Everything looks fine
+    }
 }

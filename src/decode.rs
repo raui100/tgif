@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, info};
 
 use crate::args::Args;
 
@@ -27,33 +27,43 @@ impl State {
 
 pub fn decode(args: &Args) {
     debug!("Reading the TGIF file from disk");
-    let tgif = std::fs::read(&args.src)
-        .unwrap_or_else(|_| panic!("Failed reading {}", &args.src));
+    let tgif = std::fs::read(&args.src).unwrap_or_else(|_| panic!("Failed reading {}", &args.src));
 
+    debug!("Parsing the header");
+    let (_name, img_width, img_height, parallel_encoding_units, remainder_bits, start_index) =
+        match &args.no_header {  // The metadata is provided via CLI or via file header
+            true => (  // The metadata of the TGIF image have been provided via CLI
+                       "TGIF",
+                       args.width.expect("Check for `None` beforehand!"),
+                       args.height.expect("Check for `None` beforehand!"),
+                       args.parallel_encoding_units.expect("Check for `None` beforehand!"),
+                       args.remainder_bits.expect("Check for `None` beforehand!"),
+                       0,  // When there is no header the first byte is already data
+            ),
 
-    // The FPGA doesn't produce a header and has hardcoded values
-    let (_name, img_width, img_height, parallel_units, remainder_bits, start_index) =
-        match &args.no_header {
-            true => { ("TGIF no_header", 8, 4, 4, 2, 0) }
-            false => {
-                let _name = std::str::from_utf8(&tgif[0..4])
+            false => {  // Actually parsing the header
+                let name = std::str::from_utf8(&tgif[0..4])
                     .expect("Failed reading format name from header. Try the '--no-header' flag");
 
-                let img_width = tgif[4..8].iter()
+                let img_width = tgif[4..8]
+                    .iter()
                     .fold(0_u32, |res, val| (res << 8) + (*val as u32));
 
-                let img_height = tgif[8..12].iter()
+                let img_height = tgif[8..12]
+                    .iter()
                     .fold(0_u32, |res, val| (res << 8) + (*val as u32));
 
-                let parallel_units = tgif[12..16].iter()
+                let parallel_encoding_units = tgif[12..16]
+                    .iter()
                     .fold(0_u32, |res, val| (res << 8) + (*val as u32));
 
                 let remainder_bits = tgif[16];
 
-                (_name, img_width, img_height, parallel_units, remainder_bits, 17)
+                let start_index = 17;  // The first 17 byte are metadata
+
+                (name, img_width, img_height, parallel_encoding_units, remainder_bits, start_index)
             }
         };
-    assert!(tgif.len() > start_index as usize);
 
     debug!("Transforming Vec<u8> to Vec<bool>");
     let img_code_bool: Vec<bool> = tgif[start_index..]
@@ -70,8 +80,8 @@ pub fn decode(args: &Args) {
 
     debug!("Reordering the Rice-index");
     let ordered_rice_indices = reorder_img(
-        &unordered_rice_indices,
-        parallel_units as usize,
+        unordered_rice_indices,
+        parallel_encoding_units as usize,
         img_width as usize,
     );
 
@@ -88,18 +98,20 @@ pub fn decode(args: &Args) {
         img_width,
         img_height,
         image::ColorType::L8,
-    ).unwrap();
+    )
+        .unwrap();
 
+    info!("Finished!")
 }
 
 /// Reverse index
 fn reverse_rice_index(vec: Vec<u8>) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::with_capacity(vec.len());
     for num in vec {
-         if (num % 2) == 0 {
+        if (num % 2) == 0 {
             out.push(num / 2);
         } else {
-             // if num=255 there is an edge-case where (num + 1) would lead to an overflow
+            // if num=255 there is an edge-case where (num + 1) would lead to an overflow
             out.push(0_u8.wrapping_sub(((num as u16 + 1) / 2) as u8));
         }
     }
@@ -144,7 +156,10 @@ fn test_reverse_delta() {
     assert_eq!(reverse_delta(vec![0, 1, 254, 3], 4), vec![0, 255, 1, 254]);
 
     // Delta with reset
-    assert_eq!(reverse_delta(vec![1, 0, 3, 254], 2), vec![255, 255, 253, 255]);
+    assert_eq!(
+        reverse_delta(vec![1, 0, 3, 254], 2),
+        vec![255, 255, 253, 255]
+    );
 
     // Another delta with reset
     let original = vec![0, 0, 255, 255, 0, 0, 0, 255];
@@ -152,10 +167,14 @@ fn test_reverse_delta() {
     assert_eq!(reverse_delta(delta, 2), original)
 }
 
-/// Reorders a vec that had been built with `parallel_units`
-fn reorder_img(img: &Vec<u8>, parallel_units: usize, img_width: usize) -> Vec<u8> {
+/// Reorders a vec that had been built with `parallel_encoding_units`
+fn reorder_img(img: Vec<u8>, parallel_encoding_units: usize, img_width: usize) -> Vec<u8> {
+    // If only one parallel encoding unit had been used or the image width is one then no
+    // reordering is necessary
+    if parallel_encoding_units == 1 || img_width == 1 { return img; }
+
     let mut ordered_vec: Vec<u8> = Vec::with_capacity(img.len());
-    let row_len = parallel_units * img_width;
+    let row_len = parallel_encoding_units * img_width;
     for ordered_index in 0..img.len() {
         // Determines in which chunk of rows the index is.
         // Is always a multiple of `img_width` (eg: [0, 1024, 2048, ...] for `img_width=1024`).
@@ -163,11 +182,11 @@ fn reorder_img(img: &Vec<u8>, parallel_units: usize, img_width: usize) -> Vec<u8
 
         // Determines the position within a chunk of rows.
         // Is always in 0..row_len
-        let pos = (ordered_index * parallel_units) % row_len;
+        let pos = (ordered_index * parallel_encoding_units) % row_len;
 
         // Offset of the position within a chunk of rows
-        // Is always in 0..parallel_units
-        let offset = (ordered_index / img_width) % parallel_units;
+        // Is always in 0..parallel_encoding_units
+        let offset = (ordered_index / img_width) % parallel_encoding_units;
 
         let unordered_index = chunk + pos + offset;
         ordered_vec.push(img[unordered_index])
@@ -180,22 +199,20 @@ fn reorder_img(img: &Vec<u8>, parallel_units: usize, img_width: usize) -> Vec<u8
 fn test_reorder_img() {
     // One Row
     let ordered = vec![0, 1, 2, 3];
-    assert_eq!(reorder_img(&ordered, 1, 4), ordered);
+    assert_eq!(reorder_img(ordered.clone(), 1, 4), ordered);
 
     // Two rows but `img_width=1`
     let ordered = vec![0, 1];
-    assert_eq!(reorder_img(&ordered, 2, 1), ordered);
+    assert_eq!(reorder_img(ordered.clone(), 2, 1), ordered);
 
-    // // 4 rows but `img_width=1`
+    // 4 rows but `img_width=1`
     let ordered = vec![0, 1, 2, 3];
-    assert_eq!(reorder_img(&ordered, 2, 1), ordered);
+    assert_eq!(reorder_img(ordered.clone(), 2, 1), ordered);
 
+    // Actually ordering stuff
     let ordered = vec![0, 1, 2, 3];
     let unordered = vec![0, 2, 1, 3];
-    assert_eq!(
-        reorder_img(&unordered, 2, 2),
-        ordered
-    )
+    assert_eq!(reorder_img(unordered, 2, 2), ordered)
 }
 
 fn u8_to_array_bool(num: &u8) -> [bool; 8] {
@@ -246,13 +263,15 @@ fn decode_rice(code: &[bool], number_of_pixel: usize, remainder_bits: u8) -> Vec
     for bool in code.iter() {
         // The state decides if the bit(=bool) is part of the unary coding of the remainder coding
         match state.coding {
-            Coding::Unary => {  // The current bit (=bool) is part of the unary coding
+            Coding::Unary => {
+                // The current bit (=bool) is part of the unary coding
                 match bool {
-                    true => { state.unary += 1 }  // Unary coding continues
-                    false => { state.coding = Coding::Remainder }  // End of unary coding
+                    true => state.unary += 1,                  // Unary coding continues
+                    false => state.coding = Coding::Remainder, // End of unary coding
                 }
             }
-            Coding::Remainder => {  // The current bit (=bool) is part of the unary coding
+            Coding::Remainder => {
+                // The current bit (=bool) is part of the unary coding
 
                 // The remainder has a size of `remainder_bits` (eg: 2)
                 // We can model this for '11' as (((0 << 1) + 1) << 1) + 1)
@@ -282,8 +301,8 @@ fn decode_rice(code: &[bool], number_of_pixel: usize, remainder_bits: u8) -> Vec
 
 #[test]
 fn test_decode_rice() {
-    let code_0 = vec![false, false, false];  // == 0
-    let code_3 = vec![false, true, true];  // == 3
+    let code_0 = vec![false, false, false]; // == 0
+    let code_3 = vec![false, true, true]; // == 3
     let code_7 = vec![true, false, true, true]; // == 7
     let code_11 = vec![true, true, false, true, true]; // == 11
 
@@ -299,8 +318,5 @@ fn test_decode_rice() {
         .flat_map(|v| v.clone())
         .collect();
 
-    assert_eq!(decode_rice(&code, 4, 2),
-               vec![0, 3, 7, 11]
-    )
+    assert_eq!(decode_rice(&code, 4, 2), vec![0, 3, 7, 11])
 }
-
