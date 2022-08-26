@@ -24,8 +24,8 @@ pub fn encode(args: &Args) {
 
     let mut img_bool = rice_code(&image, parallel_encoding_units, remainder_bits);
 
-    // Padding the end with "0"
-    img_bool.extend(vec![false; 8 - (img_bool.len() % 8)]);
+    // Padding the end with "1"
+    img_bool.extend(vec![true; 8 - (img_bool.len() % 8)]);
     debug!("Finished encoding to TGIF");
 
     // Calculating the compression rate

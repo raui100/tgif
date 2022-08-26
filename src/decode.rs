@@ -2,29 +2,6 @@ use log::{debug, info};
 
 use crate::args::Args;
 
-enum Coding {
-    Unary,
-    Remainder,
-}
-
-struct State {
-    coding: Coding,
-    unary: u8,
-    remainder: u8,
-    remainder_index: u8,
-}
-
-impl State {
-    fn reset() -> State {
-        State {
-            coding: Coding::Unary,
-            unary: 0,
-            remainder: 0,
-            remainder_index: 0,
-        }
-    }
-}
-
 pub fn decode(args: &Args) {
     debug!("Reading the TGIF file from disk");
     let tgif = std::fs::read(&args.src).unwrap_or_else(|_| panic!("Failed reading {}", &args.src));
@@ -73,8 +50,7 @@ pub fn decode(args: &Args) {
 
     debug!("Decoding Rice-code to Rice-index");
     let unordered_rice_indices = decode_rice(
-        &img_code_bool,
-        (img_height * img_width) as usize,
+        img_code_bool,
         remainder_bits,
     );
 
@@ -256,61 +232,44 @@ fn test_u8_to_array_bool() {
     );
 }
 
-fn decode_rice(code: &[bool], number_of_pixel: usize, remainder_bits: u8) -> Vec<u8> {
-    let mut img_code_u8: Vec<u8> = Vec::with_capacity(number_of_pixel);
-    let mut state = State::reset();
-    let mut pixels = 0;
-    for bool in code.iter() {
-        // The state decides if the bit(=bool) is part of the unary coding of the remainder coding
-        match state.coding {
-            Coding::Unary => {
-                // The current bit (=bool) is part of the unary coding
-                match bool {
-                    true => state.unary += 1,                  // Unary coding continues
-                    false => state.coding = Coding::Remainder, // End of unary coding
-                }
-            }
-            Coding::Remainder => {
-                // The current bit (=bool) is part of the unary coding
-
-                // The remainder has a size of `remainder_bits` (eg: 2)
-                // We can model this for '11' as (((0 << 1) + 1) << 1) + 1)
-                state.remainder = (state.remainder << 1) + (*bool as u8);
-
-                // We have to keep track of the size of the remainder (in bits)
-                state.remainder_index += 1;
-                if state.remainder_index == remainder_bits {
-                    // Adding the unary coding and the remainder and pushing this to the vec
-                    img_code_u8.push((state.unary << remainder_bits) + state.remainder);
-                    pixels += 1;
-
-                    // Due to the bit padding at the end of the file we have to break out of the
-                    // loop manually, which is `number_of_pixel - 1` due to zero-indexing
-                    if pixels == number_of_pixel {
-                        return img_code_u8;
-                    } else {
-                        state = State::reset();
+fn decode_rice(code: Vec<bool>, remainder_bits: u8) -> Vec<u8> {
+    let mut img_code_u8 = Vec::with_capacity(code.len() / 2);
+    let mut it = code.iter();
+    let mut num = 0_u8;
+    loop {
+        let bool = it.next();
+        match bool {
+            None => return img_code_u8,
+            Some(bool) => {
+                match *bool {
+                    true => num += 1,
+                    false => {
+                        for _ in 0..remainder_bits {
+                            let rem = it.next()
+                                .expect("There are always enough bits after the '0' of the unary coding");
+                            num = (num << 1) + (*rem as u8);
+                        }
+                        img_code_u8.push(num);
+                        num = 0;
                     }
                 }
             }
         }
     }
-
-    panic!("We should always return early via return function!")
 }
 
 #[test]
-fn test_decode_rice() {
+fn test_decode_rice_faster() {
     let code_0 = vec![false, false, false]; // == 0
     let code_3 = vec![false, true, true]; // == 3
     let code_7 = vec![true, false, true, true]; // == 7
     let code_11 = vec![true, true, false, true, true]; // == 11
 
     // Testing single numbers
-    assert_eq!(decode_rice(&code_0, 1, 2), vec![0]);
-    assert_eq!(decode_rice(&code_3, 1, 2), vec![3]);
-    assert_eq!(decode_rice(&code_7, 1, 2), vec![7]);
-    assert_eq!(decode_rice(&code_11, 1, 2), vec![11]);
+    assert_eq!(decode_rice(code_0.clone(), 2), vec![0]);
+    assert_eq!(decode_rice(code_3.clone(), 2), vec![3]);
+    assert_eq!(decode_rice(code_7.clone(), 2), vec![7]);
+    assert_eq!(decode_rice(code_11.clone(), 2), vec![11]);
 
     // Testing "real" vectors
     let code: Vec<bool> = [code_0, code_3, code_7, code_11]
@@ -318,5 +277,5 @@ fn test_decode_rice() {
         .flat_map(|v| v.clone())
         .collect();
 
-    assert_eq!(decode_rice(&code, 4, 2), vec![0, 3, 7, 11])
+    assert_eq!(decode_rice(code, 2), vec![0, 3, 7, 11])
 }
