@@ -1,7 +1,6 @@
 use log::{debug, info};
 
 use crate::args::Args;
-use crate::codebooks::_vec_bool_to_u8;
 
 pub fn decode(args: &Args) {
     debug!("Reading the TGIF file from disk");
@@ -43,15 +42,9 @@ pub fn decode(args: &Args) {
             }
         };
 
-    debug!("Transforming Vec<u8> to Vec<bool>");
-    let img_code_bool: Vec<bool> = tgif[start_index..]
-        .iter()
-        .flat_map(|num| u8_to_array_bool(*num))
-        .collect();
-
     debug!("Decoding Rice-code to Rice-index");
     let unordered_rice_indices = decode_rice(
-        img_code_bool,
+        &tgif[start_index..],
         remainder_bits,
     );
 
@@ -82,8 +75,12 @@ pub fn decode(args: &Args) {
 }
 
 /// Reverse index
-fn reverse_rice_index(vec: Vec<u8>) -> Vec<u8> {
-    vec.into_iter().map(rev_rice_index).collect()
+fn reverse_rice_index(mut vec: Vec<u8>) -> Vec<u8> {
+    for num in vec.iter_mut() {
+        *num = rev_rice_index(*num)
+    }
+
+    vec
 }
 
 #[inline(always)]
@@ -99,19 +96,16 @@ fn test_reverse_rice_index() {
 }
 
 /// Reverses the delta calculation
-fn reverse_delta(delta: Vec<u8>, img_width: usize) -> Vec<u8> {
-    let mut img: Vec<u8> = Vec::with_capacity(delta.len());
-    let mut prev_num = 0_u8;
-    for (ind, delta) in delta.into_iter().enumerate() {
-        if ind % img_width == 0 {
-            prev_num = 0;
+fn reverse_delta(mut delta: Vec<u8>, img_width: usize) -> Vec<u8> {
+    for chunk in delta.chunks_exact_mut(img_width) {
+        let mut prev_num = 0_u8;
+        for delta in chunk.iter_mut() {
+            prev_num = prev_num.wrapping_sub(*delta);
+            *delta = prev_num
         }
-        let num = prev_num.wrapping_sub(delta);
-        img.push(num);
-        prev_num = num;
     }
 
-    img
+    delta
 }
 
 #[test]
@@ -140,33 +134,69 @@ fn test_reverse_delta() {
     assert_eq!(reverse_delta(delta, 2), original)
 }
 
+
 /// Reorders a vec that had been built with `parallel_encoding_units`
+///
+/// # Example
+/// Let's say we an image with 2 pixel width and 3 pixel height: [[0, 1], [2, 3], [4, 5]]
+/// This image is being reordered with 3 parallel encoding units to: [0, 2, 4, 1, 3, 5]
+/// To reorder the image we calculate the original indices as following:
+/// We can process independent chunks of the image that have the `chunk_size` image width times
+/// number of parallel encoding units, because we now that the first `parallel_encoding_units` rows
+/// are completely independent of all following rows
+/// In our example `chunk_size = 2 * 3 = 6`
+/// Within those chunks the indices that map the reordered image to the original image can be split
+/// mentally in `positions` and `offsets`.
+/// The `positions` point to the indices of the first row of pixels in the ordered image. In our
+/// example this would be `positions = [0, 3, 0, 3, 0, 3]`.
+/// The `offsets` define the row within the chunk. `positions` always points to the first row of
+/// pixels. With the offset being 1 we would point to the second row. In our example this would be
+/// `offsets = [0, 0, 1, 1, 2, 2]`
+/// When we sum the elements of `positions
 fn reorder_img(img: Vec<u8>, parallel_encoding_units: usize, img_width: usize) -> Vec<u8> {
-    // If only one parallel encoding unit had been used or the image width is one then no
-    // reordering is necessary
+    // Testing if reordering is unnecessary
     if parallel_encoding_units == 1 || img_width == 1 { return img; }
 
-    let mut ordered_vec: Vec<u8> = Vec::with_capacity(img.len());
-    let row_len = parallel_encoding_units * img_width;
-    for ordered_index in 0..img.len() {
-        // Determines in which chunk of rows the index is.
-        // Is always a multiple of `img_width` (eg: [0, 1024, 2048, ...] for `img_width=1024`).
-        let chunk = (ordered_index / row_len) * row_len;
+    let chunk_size = parallel_encoding_units * img_width;
 
-        // Determines the position within a chunk of rows.
-        // Is always in 0..row_len
-        let pos = (ordered_index * parallel_encoding_units) % row_len;
+    let indices = (0..chunk_size)
+        .map(|ind| {
+            let position = (ind * parallel_encoding_units) % chunk_size;
+            let offset = ind / img_width;
+            position + offset
+        })
+        .collect::<Vec<usize>>();
 
-        // Offset of the position within a chunk of rows
-        // Is always in 0..parallel_encoding_units
-        let offset = (ordered_index / img_width) % parallel_encoding_units;
+    debug!("Mapping");
+    reorder_by_mapping(&img, &indices, chunk_size)
+    // debug!("Perm");
+    // reorder_by_perm(&img, &indices, chunk_size);
+    // debug!("Perm mut");
+    // reorder_by_perm_mut(img, &indices, chunk_size)
 
-        let unordered_index = chunk + pos + offset;
-        ordered_vec.push(img[unordered_index])
-    }
-
-    ordered_vec
 }
+
+fn reorder_by_mapping(img: &[u8], indices: &[usize], chunk_size: usize) -> Vec<u8>{
+    img.chunks_exact(chunk_size)
+        .flat_map(|chunk| indices.iter().map(|ind| chunk[*ind]))
+        .collect()
+}
+
+fn reorder_by_perm(img: &[u8], indices: &[usize], chunk_size: usize) -> Vec<u8>{
+    let permutations = permutation::sort_unstable(&indices);  // All unique
+    img.chunks_exact(chunk_size)
+        .flat_map(|chunk| permutations.apply_slice(chunk))
+        .collect()
+}
+
+fn reorder_by_perm_mut(mut img: Vec<u8>, indices: &[usize], chunk_size: usize) -> Vec<u8>{
+    let mut permutations = permutation::sort_unstable(&indices);  // All unique
+    for chunk in img.chunks_exact_mut(chunk_size) {
+        permutations.apply_slice_in_place(chunk)
+    }
+    img
+}
+
 
 #[test]
 fn test_reorder_img() {
@@ -190,8 +220,8 @@ fn test_reorder_img() {
 
 
 #[inline(always)]
-fn u8_to_array_bool(num: u8) -> [bool; 8] {
-    U8_TO_ARRAY_BOOL[num as usize]
+fn u8_to_array_bool(num: u8) -> &'static [bool; 8] {
+    &U8_TO_ARRAY_BOOL[num as usize]
 }
 
 const U8_TO_ARRAY_BOOL: [[bool; 8]; 256] = [[false, false, false, false, false, false, false, false], [false, false, false, false, false, false, false, true], [false, false, false, false, false, false, true, false], [false, false, false, false, false, false, true, true], [false, false, false, false, false, true, false, false], [false, false, false, false, false, true, false, true], [false, false, false, false, false, true, true, false], [false, false, false, false, false, true, true, true], [false, false, false, false, true, false, false, false], [false, false, false, false, true, false, false, true], [false, false, false, false, true, false, true, false], [false, false, false, false, true, false, true, true], [false, false, false, false, true, true, false, false], [false, false, false, false, true, true, false, true], [false, false, false, false, true, true, true, false], [false, false, false, false, true, true, true, true], [false, false, false, true, false, false, false, false], [false, false, false, true, false, false, false, true], [false, false, false, true, false, false, true, false], [false, false, false, true, false, false, true, true], [false, false, false, true, false, true, false, false], [false, false, false, true, false, true, false, true], [false, false, false, true, false, true, true, false], [false, false, false, true, false, true, true, true], [false, false, false, true, true, false, false, false], [false, false, false, true, true, false, false, true], [false, false, false, true, true, false, true, false], [false, false, false, true, true, false, true, true], [false, false, false, true, true, true, false, false], [false, false, false, true, true, true, false, true], [false, false, false, true, true, true, true, false], [false, false, false, true, true, true, true, true], [false, false, true, false, false, false, false, false], [false, false, true, false, false, false, false, true], [false, false, true, false, false, false, true, false], [false, false, true, false, false, false, true, true], [false, false, true, false, false, true, false, false], [false, false, true, false, false, true, false, true], [false, false, true, false, false, true, true, false], [false, false, true, false, false, true, true, true], [false, false, true, false, true, false, false, false], [false, false, true, false, true, false, false, true], [false, false, true, false, true, false, true, false], [false, false, true, false, true, false, true, true], [false, false, true, false, true, true, false, false], [false, false, true, false, true, true, false, true], [false, false, true, false, true, true, true, false], [false, false, true, false, true, true, true, true], [false, false, true, true, false, false, false, false], [false, false, true, true, false, false, false, true], [false, false, true, true, false, false, true, false], [false, false, true, true, false, false, true, true], [false, false, true, true, false, true, false, false], [false, false, true, true, false, true, false, true], [false, false, true, true, false, true, true, false], [false, false, true, true, false, true, true, true], [false, false, true, true, true, false, false, false], [false, false, true, true, true, false, false, true], [false, false, true, true, true, false, true, false], [false, false, true, true, true, false, true, true], [false, false, true, true, true, true, false, false], [false, false, true, true, true, true, false, true], [false, false, true, true, true, true, true, false], [false, false, true, true, true, true, true, true], [false, true, false, false, false, false, false, false], [false, true, false, false, false, false, false, true], [false, true, false, false, false, false, true, false], [false, true, false, false, false, false, true, true], [false, true, false, false, false, true, false, false], [false, true, false, false, false, true, false, true], [false, true, false, false, false, true, true, false], [false, true, false, false, false, true, true, true], [false, true, false, false, true, false, false, false], [false, true, false, false, true, false, false, true], [false, true, false, false, true, false, true, false], [false, true, false, false, true, false, true, true], [false, true, false, false, true, true, false, false], [false, true, false, false, true, true, false, true], [false, true, false, false, true, true, true, false], [false, true, false, false, true, true, true, true], [false, true, false, true, false, false, false, false], [false, true, false, true, false, false, false, true], [false, true, false, true, false, false, true, false], [false, true, false, true, false, false, true, true], [false, true, false, true, false, true, false, false], [false, true, false, true, false, true, false, true], [false, true, false, true, false, true, true, false], [false, true, false, true, false, true, true, true], [false, true, false, true, true, false, false, false], [false, true, false, true, true, false, false, true], [false, true, false, true, true, false, true, false], [false, true, false, true, true, false, true, true], [false, true, false, true, true, true, false, false], [false, true, false, true, true, true, false, true], [false, true, false, true, true, true, true, false], [false, true, false, true, true, true, true, true], [false, true, true, false, false, false, false, false], [false, true, true, false, false, false, false, true], [false, true, true, false, false, false, true, false], [false, true, true, false, false, false, true, true], [false, true, true, false, false, true, false, false], [false, true, true, false, false, true, false, true], [false, true, true, false, false, true, true, false], [false, true, true, false, false, true, true, true], [false, true, true, false, true, false, false, false], [false, true, true, false, true, false, false, true], [false, true, true, false, true, false, true, false], [false, true, true, false, true, false, true, true], [false, true, true, false, true, true, false, false], [false, true, true, false, true, true, false, true], [false, true, true, false, true, true, true, false], [false, true, true, false, true, true, true, true], [false, true, true, true, false, false, false, false], [false, true, true, true, false, false, false, true], [false, true, true, true, false, false, true, false], [false, true, true, true, false, false, true, true], [false, true, true, true, false, true, false, false], [false, true, true, true, false, true, false, true], [false, true, true, true, false, true, true, false], [false, true, true, true, false, true, true, true], [false, true, true, true, true, false, false, false], [false, true, true, true, true, false, false, true], [false, true, true, true, true, false, true, false], [false, true, true, true, true, false, true, true], [false, true, true, true, true, true, false, false], [false, true, true, true, true, true, false, true], [false, true, true, true, true, true, true, false], [false, true, true, true, true, true, true, true], [true, false, false, false, false, false, false, false], [true, false, false, false, false, false, false, true], [true, false, false, false, false, false, true, false], [true, false, false, false, false, false, true, true], [true, false, false, false, false, true, false, false], [true, false, false, false, false, true, false, true], [true, false, false, false, false, true, true, false], [true, false, false, false, false, true, true, true], [true, false, false, false, true, false, false, false], [true, false, false, false, true, false, false, true], [true, false, false, false, true, false, true, false], [true, false, false, false, true, false, true, true], [true, false, false, false, true, true, false, false], [true, false, false, false, true, true, false, true], [true, false, false, false, true, true, true, false], [true, false, false, false, true, true, true, true], [true, false, false, true, false, false, false, false], [true, false, false, true, false, false, false, true], [true, false, false, true, false, false, true, false], [true, false, false, true, false, false, true, true], [true, false, false, true, false, true, false, false], [true, false, false, true, false, true, false, true], [true, false, false, true, false, true, true, false], [true, false, false, true, false, true, true, true], [true, false, false, true, true, false, false, false], [true, false, false, true, true, false, false, true], [true, false, false, true, true, false, true, false], [true, false, false, true, true, false, true, true], [true, false, false, true, true, true, false, false], [true, false, false, true, true, true, false, true], [true, false, false, true, true, true, true, false], [true, false, false, true, true, true, true, true], [true, false, true, false, false, false, false, false], [true, false, true, false, false, false, false, true], [true, false, true, false, false, false, true, false], [true, false, true, false, false, false, true, true], [true, false, true, false, false, true, false, false], [true, false, true, false, false, true, false, true], [true, false, true, false, false, true, true, false], [true, false, true, false, false, true, true, true], [true, false, true, false, true, false, false, false], [true, false, true, false, true, false, false, true], [true, false, true, false, true, false, true, false], [true, false, true, false, true, false, true, true], [true, false, true, false, true, true, false, false], [true, false, true, false, true, true, false, true], [true, false, true, false, true, true, true, false], [true, false, true, false, true, true, true, true], [true, false, true, true, false, false, false, false], [true, false, true, true, false, false, false, true], [true, false, true, true, false, false, true, false], [true, false, true, true, false, false, true, true], [true, false, true, true, false, true, false, false], [true, false, true, true, false, true, false, true], [true, false, true, true, false, true, true, false], [true, false, true, true, false, true, true, true], [true, false, true, true, true, false, false, false], [true, false, true, true, true, false, false, true], [true, false, true, true, true, false, true, false], [true, false, true, true, true, false, true, true], [true, false, true, true, true, true, false, false], [true, false, true, true, true, true, false, true], [true, false, true, true, true, true, true, false], [true, false, true, true, true, true, true, true], [true, true, false, false, false, false, false, false], [true, true, false, false, false, false, false, true], [true, true, false, false, false, false, true, false], [true, true, false, false, false, false, true, true], [true, true, false, false, false, true, false, false], [true, true, false, false, false, true, false, true], [true, true, false, false, false, true, true, false], [true, true, false, false, false, true, true, true], [true, true, false, false, true, false, false, false], [true, true, false, false, true, false, false, true], [true, true, false, false, true, false, true, false], [true, true, false, false, true, false, true, true], [true, true, false, false, true, true, false, false], [true, true, false, false, true, true, false, true], [true, true, false, false, true, true, true, false], [true, true, false, false, true, true, true, true], [true, true, false, true, false, false, false, false], [true, true, false, true, false, false, false, true], [true, true, false, true, false, false, true, false], [true, true, false, true, false, false, true, true], [true, true, false, true, false, true, false, false], [true, true, false, true, false, true, false, true], [true, true, false, true, false, true, true, false], [true, true, false, true, false, true, true, true], [true, true, false, true, true, false, false, false], [true, true, false, true, true, false, false, true], [true, true, false, true, true, false, true, false], [true, true, false, true, true, false, true, true], [true, true, false, true, true, true, false, false], [true, true, false, true, true, true, false, true], [true, true, false, true, true, true, true, false], [true, true, false, true, true, true, true, true], [true, true, true, false, false, false, false, false], [true, true, true, false, false, false, false, true], [true, true, true, false, false, false, true, false], [true, true, true, false, false, false, true, true], [true, true, true, false, false, true, false, false], [true, true, true, false, false, true, false, true], [true, true, true, false, false, true, true, false], [true, true, true, false, false, true, true, true], [true, true, true, false, true, false, false, false], [true, true, true, false, true, false, false, true], [true, true, true, false, true, false, true, false], [true, true, true, false, true, false, true, true], [true, true, true, false, true, true, false, false], [true, true, true, false, true, true, false, true], [true, true, true, false, true, true, true, false], [true, true, true, false, true, true, true, true], [true, true, true, true, false, false, false, false], [true, true, true, true, false, false, false, true], [true, true, true, true, false, false, true, false], [true, true, true, true, false, false, true, true], [true, true, true, true, false, true, false, false], [true, true, true, true, false, true, false, true], [true, true, true, true, false, true, true, false], [true, true, true, true, false, true, true, true], [true, true, true, true, true, false, false, false], [true, true, true, true, true, false, false, true], [true, true, true, true, true, false, true, false], [true, true, true, true, true, false, true, true], [true, true, true, true, true, true, false, false], [true, true, true, true, true, true, false, true], [true, true, true, true, true, true, true, false], [true, true, true, true, true, true, true, true], ];
@@ -199,63 +229,13 @@ const U8_TO_ARRAY_BOOL: [[bool; 8]; 256] = [[false, false, false, false, false, 
 
 #[test]
 fn test_u8_to_array_bool() {
-    assert_eq!(
-        u8_to_array_bool(0),
-        [false, false, false, false, false, false, false, false, ]
-    );
-
-    assert_eq!(
-        u8_to_array_bool(255),
-        [true, true, true, true, true, true, true, true, ]
-    );
-
-    assert_eq!(
-        u8_to_array_bool(1),
-        [false, false, false, false, false, false, false, true]
-    );
-
-    assert_eq!(
-        u8_to_array_bool(254),
-        [true, true, true, true, true, true, true, false]
-    );
-
-    assert_eq!(
-        u8_to_array_bool(128),
-        [true, false, false, false, false, false, false, false]
-    );
-}
-
-
-fn _decode_rice(code: Vec<bool>, remainder_bits: u8, pixel_count: usize) -> Vec<u8> {
-    debug!("Creating the codebook");
-    let code_book = _vec_bool_to_u8(
-        remainder_bits,
-        2_u8.pow(remainder_bits as u32),
-    );
-
-    assert!(remainder_bits <= 7);
-    let remainder_bits: usize = remainder_bits as usize;
-
-    debug!("Decoding the Rice-code");
-    let mut start = 0;
-    let mut ind = 0;
-    let mut img_code_u8 = Vec::new();
-    loop {
-        match code[ind] {
-            true => ind += 1,
-            false => {
-                ind += remainder_bits + 1;
-                let num = code_book.get(&code[start..ind]).unwrap();
-                img_code_u8.push(*num);
-                start = ind;
-
-                if img_code_u8.len() == pixel_count { return img_code_u8 }
-            }
-        }
+    for ind in 0..=u8::MAX {
+        assert_eq!(ind, _bools_to_u8(u8_to_array_bool(ind)))
     }
 }
 
-fn decode_rice(code: Vec<bool>, remainder_bits: u8)-> Vec<u8> {
+
+fn decode_rice(code: &[u8], remainder_bits: u8) -> Vec<u8> {
     let mut img_code_u8 = Vec::with_capacity(code.len() / 2);
     let mut num = 0_u8;
     let mut remainder_index = 0_u8;
@@ -263,35 +243,37 @@ fn decode_rice(code: Vec<bool>, remainder_bits: u8)-> Vec<u8> {
 
     // The algorithm can be simplified if remainder_bits == 0
     if remainder_bits == 0 {
-        for bit in code {
-            match bit {
-                true => num += 1,
-                false => {
-                    img_code_u8.push(num);
-                    num = 0;
+        for &chunk in code.iter() {
+            for &bit in u8_to_array_bool(chunk) {
+                match bit {
+                    true => num += 1,
+                    false => {
+                        img_code_u8.push(num);
+                        num = 0;
+                    }
                 }
             }
         }
-        return img_code_u8;
-    }
-
-    // General algorithm for remainder_bits >= 1
-    for bit in code {
-        match code_unary {
-            true => {
-                match bit {
-                    true => num += 1,
-                    false => code_unary = false,
-                }
-            }
-            false => {
-                num = (num << 1) + (bit as u8);
-                remainder_index += 1;
-                if remainder_index == remainder_bits {
-                    img_code_u8.push(num);
-                    num = 0;
-                    remainder_index = 0;
-                    code_unary = true;
+    } else {  // General algorithm for remainder_bits >= 1
+        for chunk in code {
+            for &bit in u8_to_array_bool(*chunk) {
+                match code_unary {
+                    true => {
+                        match bit {
+                            true => num += 1,
+                            false => code_unary = false,
+                        }
+                    }
+                    false => {
+                        num = (num << 1) + (bit as u8);
+                        remainder_index += 1;
+                        if remainder_index == remainder_bits {
+                            img_code_u8.push(num);
+                            num = 0;
+                            remainder_index = 0;
+                            code_unary = true;
+                        }
+                    }
                 }
             }
         }
@@ -300,25 +282,36 @@ fn decode_rice(code: Vec<bool>, remainder_bits: u8)-> Vec<u8> {
     img_code_u8
 }
 
+// #[test]
+// fn test_decode_rice() {
+//     let code_0 = vec![false, false, false]; // == 0
+//     let code_3 = vec![false, true, true]; // == 3
+//     let code_7 = vec![true, false, true, true]; // == 7
+//     let code_11 = vec![true, true, false, true, true]; // == 11
+//     let n = [0, 3, 7, 11];
+//
+//     // Testing single numbers
+//     assert_eq!(decode_rice(code_0.clone(), 2), vec![n[0]]);
+//     assert_eq!(decode_rice(code_3.clone(), 2), vec![n[1]]);
+//     assert_eq!(decode_rice(code_7.clone(), 2), vec![n[2]]);
+//     assert_eq!(decode_rice(code_11.clone(), 2), vec![n[3]]);
+//
+//     // Testing "real" vectors
+//     let code: Vec<bool> = [code_0, code_3, code_7, code_11]
+//         .iter()
+//         .flat_map(|v| v.clone())
+//         .collect();
+//
+//     assert_eq!(decode_rice(code, 2), n)
+// }
+
+fn _bools_to_u8(bools: &[bool; 8]) -> u8 {
+    bools.iter().fold(0_u8, |num, &bool| (num << 1) + (bool as u8))
+}
+
 #[test]
-fn test_decode_rice() {
-    let code_0 = vec![false, false, false]; // == 0
-    let code_3 = vec![false, true, true]; // == 3
-    let code_7 = vec![true, false, true, true]; // == 7
-    let code_11 = vec![true, true, false, true, true]; // == 11
-    let n = [0, 3, 7, 11];
-
-    // Testing single numbers
-    assert_eq!(decode_rice(code_0.clone(), 2), vec![n[0]]);
-    assert_eq!(decode_rice(code_3.clone(), 2), vec![n[1]]);
-    assert_eq!(decode_rice(code_7.clone(), 2), vec![n[2]]);
-    assert_eq!(decode_rice(code_11.clone(), 2), vec![n[3]]);
-
-    // Testing "real" vectors
-    let code: Vec<bool> = [code_0, code_3, code_7, code_11]
-        .iter()
-        .flat_map(|v| v.clone())
-        .collect();
-
-    assert_eq!(decode_rice(code, 2), n)
+fn test_bools_to_u8() {
+    assert_eq!(0, _bools_to_u8(&[false, false, false, false, false, false, false, false]));
+    assert_eq!(1, _bools_to_u8(&[false, false, false, false, false, false, false, true]));
+    assert_eq!(255, _bools_to_u8(&[true, true, true, true, true, true, true, true]));
 }
