@@ -140,34 +140,13 @@ fn reorder_img(img: Vec<u8>, parallel_encoding_units: usize, img_width: usize) -
         .collect::<Vec<usize>>();
 
     reorder_by_mapping(&img, &indices, chunk_size)
-    // debug!("Perm");
-    // _reorder_by_perm(&img, &indices, chunk_size);
-    // debug!("Perm mut");
-    // _reorder_by_perm_mut(img, &indices, chunk_size)
-
 }
 
-fn reorder_by_mapping(img: &[u8], indices: &[usize], chunk_size: usize) -> Vec<u8>{
+fn reorder_by_mapping(img: &[u8], indices: &[usize], chunk_size: usize) -> Vec<u8> {
     img.chunks_exact(chunk_size)
         .flat_map(|chunk| indices.iter().map(|ind| chunk[*ind]))
         .collect()
 }
-
-fn _reorder_by_perm(img: &[u8], indices: &[usize], chunk_size: usize) -> Vec<u8>{
-    let permutations = permutation::sort_unstable(&indices);  // All unique
-    img.chunks_exact(chunk_size)
-        .flat_map(|chunk| permutations.apply_slice(chunk))
-        .collect()
-}
-
-fn _reorder_by_perm_mut(mut img: Vec<u8>, indices: &[usize], chunk_size: usize) -> Vec<u8>{
-    let mut permutations = permutation::sort_unstable(&indices);  // All unique
-    for chunk in img.chunks_exact_mut(chunk_size) {
-        permutations.apply_slice_in_place(chunk)
-    }
-    img
-}
-
 
 #[test]
 fn test_reorder_img() {
@@ -205,16 +184,15 @@ fn test_u8_to_array_bool() {
     }
 }
 
-
-fn decode_rice(code: &[u8], remainder_bits: u8) -> Vec<u8> {
-    let mut img_code_u8 = Vec::with_capacity(code.len() / 2);
+fn decode_rice(img: &[u8], remainder_bits: u8, size: usize) -> Vec<u8> {
+    let mut img_code_u8 = Vec::with_capacity(size);
     let mut num = 0_u8;
     let mut remainder_index = 0_u8;
     let mut code_unary = true;
 
     // The algorithm can be simplified if remainder_bits == 0
     if remainder_bits == 0 {
-        for &chunk in code.iter() {
+        for &chunk in img.iter() {
             for &bit in u8_to_array_bool(chunk) {
                 match bit {
                     true => num += 1,
@@ -226,7 +204,7 @@ fn decode_rice(code: &[u8], remainder_bits: u8) -> Vec<u8> {
             }
         }
     } else {  // General algorithm for remainder_bits >= 1
-        for chunk in code {
+        for chunk in img {
             for &bit in u8_to_array_bool(*chunk) {
                 match code_unary {
                     true => {
@@ -256,17 +234,17 @@ fn decode_rice(code: &[u8], remainder_bits: u8) -> Vec<u8> {
 #[test]
 fn test_decode_rice() {
     // Testing simple case without remainder
-    assert_eq!(decode_rice(&[0], 0), vec![0; 8]);
-    assert_eq!(decode_rice(&[254], 0), vec![7]);
+    assert_eq!(decode_rice(&[0], 0, 1), vec![0; 8]);
+    assert_eq!(decode_rice(&[254], 0, 1), vec![7]);
 
     // Testing simple case with remainder
-    assert_eq!(decode_rice(&[0], 3), vec![0, 0]);
+    assert_eq!(decode_rice(&[0], 3, 1), vec![0, 0]);
     // 186 == "1011 1010" => [(1 << 2) + 3, (1 << 2) + 2)]
-    assert_eq!(decode_rice(&[186], 2), vec![7,6]);
+    assert_eq!(decode_rice(&[186], 2, 1), vec![7, 6]);
 
     // Testing case with multiple "true" at the end, that won't be parsed
     // 127_u8 -> [false , true, ..., true; 8] -(decoded with 0 remainder bits)-> [0]
-    assert_eq!(decode_rice(&[127], 0), vec![0]);
+    assert_eq!(decode_rice(&[127], 0, 1), vec![0]);
 }
 
 fn _bools_to_u8(bools: &[bool; 8]) -> u8 {
@@ -278,4 +256,39 @@ fn test_bools_to_u8() {
     assert_eq!(0, _bools_to_u8(&[false, false, false, false, false, false, false, false]));
     assert_eq!(1, _bools_to_u8(&[false, false, false, false, false, false, false, true]));
     assert_eq!(255, _bools_to_u8(&[true, true, true, true, true, true, true, true]));
+}
+
+struct Header {
+    _name: String,
+    width: u32,
+    height: u32,
+    pae: u32,
+    remainder: u8,
+    start_index: usize,
+}
+
+/// Parses the header from the beginning of the file or from CLI `args`
+fn parse_header(img: &[u8], args: &Args) -> Header {
+    if args.no_header {
+        // Image has no header. Using CLI arguments
+        trace!("Image has no header. Using CLI arguments");
+        Header {
+            _name: "TGIF".to_string(),
+            width: args.width.expect("Image width is missing"),
+            height: args.height.expect("Image height is missing"),
+            pae: args.parallel_encoding_units.expect("Number of parallel encoding units is missing"),
+            remainder: args.remainder_bits.expect("Bit size of remainder is missing"),
+            start_index: 0,  // Without header the data starts with the first bit
+        }
+    } else {
+        trace!("Reading header from image");
+        Header {
+            _name: "TGIF".to_string(),
+            width: img[4..8].iter().fold(0_u32, |res, val| (res << 8) + (*val as u32)),
+            height: img[8..12].iter().fold(0_u32, |res, val| (res << 8) + (*val as u32)),
+            pae: img[12..16].iter().fold(0_u32, |res, val| (res << 8) + (*val as u32)),
+            remainder: img[16],
+            start_index: 17,
+        }
+    }
 }

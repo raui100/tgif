@@ -34,8 +34,8 @@ fn main() {
     } else { // Encoding TGIF to a graphic format (eg: PNG, BMP, ...)
         if args.no_header {
             check_remainder_bits_and_parallel_encoding_units(&args);
-            assert!(args.width != None, "Please specify the image width! (eg: -w 128)");
-            assert!(args.height != None, "Please specify the image height (eg: -h 128)");
+            assert!(args.width.is_some(), "Please specify the image width! (eg: -w 128)");
+            assert!(args.height.is_some(), "Please specify the image height (eg: -h 128)");
         }
     }
 
