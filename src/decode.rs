@@ -167,12 +167,11 @@ fn reorder_img(img: Vec<u8>, parallel_encoding_units: usize, img_width: usize) -
         })
         .collect::<Vec<usize>>();
 
-    debug!("Mapping");
     reorder_by_mapping(&img, &indices, chunk_size)
     // debug!("Perm");
-    // reorder_by_perm(&img, &indices, chunk_size);
+    // _reorder_by_perm(&img, &indices, chunk_size);
     // debug!("Perm mut");
-    // reorder_by_perm_mut(img, &indices, chunk_size)
+    // _reorder_by_perm_mut(img, &indices, chunk_size)
 
 }
 
@@ -182,14 +181,14 @@ fn reorder_by_mapping(img: &[u8], indices: &[usize], chunk_size: usize) -> Vec<u
         .collect()
 }
 
-fn reorder_by_perm(img: &[u8], indices: &[usize], chunk_size: usize) -> Vec<u8>{
+fn _reorder_by_perm(img: &[u8], indices: &[usize], chunk_size: usize) -> Vec<u8>{
     let permutations = permutation::sort_unstable(&indices);  // All unique
     img.chunks_exact(chunk_size)
         .flat_map(|chunk| permutations.apply_slice(chunk))
         .collect()
 }
 
-fn reorder_by_perm_mut(mut img: Vec<u8>, indices: &[usize], chunk_size: usize) -> Vec<u8>{
+fn _reorder_by_perm_mut(mut img: Vec<u8>, indices: &[usize], chunk_size: usize) -> Vec<u8>{
     let mut permutations = permutation::sort_unstable(&indices);  // All unique
     for chunk in img.chunks_exact_mut(chunk_size) {
         permutations.apply_slice_in_place(chunk)
@@ -282,28 +281,21 @@ fn decode_rice(code: &[u8], remainder_bits: u8) -> Vec<u8> {
     img_code_u8
 }
 
-// #[test]
-// fn test_decode_rice() {
-//     let code_0 = vec![false, false, false]; // == 0
-//     let code_3 = vec![false, true, true]; // == 3
-//     let code_7 = vec![true, false, true, true]; // == 7
-//     let code_11 = vec![true, true, false, true, true]; // == 11
-//     let n = [0, 3, 7, 11];
-//
-//     // Testing single numbers
-//     assert_eq!(decode_rice(code_0.clone(), 2), vec![n[0]]);
-//     assert_eq!(decode_rice(code_3.clone(), 2), vec![n[1]]);
-//     assert_eq!(decode_rice(code_7.clone(), 2), vec![n[2]]);
-//     assert_eq!(decode_rice(code_11.clone(), 2), vec![n[3]]);
-//
-//     // Testing "real" vectors
-//     let code: Vec<bool> = [code_0, code_3, code_7, code_11]
-//         .iter()
-//         .flat_map(|v| v.clone())
-//         .collect();
-//
-//     assert_eq!(decode_rice(code, 2), n)
-// }
+#[test]
+fn test_decode_rice() {
+    // Testing simple case without remainder
+    assert_eq!(decode_rice(&[0], 0), vec![0; 8]);
+    assert_eq!(decode_rice(&[254], 0), vec![7]);
+
+    // Testing simple case with remainder
+    assert_eq!(decode_rice(&[0], 3), vec![0, 0]);
+    // 186 == "1011 1010" => [(1 << 2) + 3, (1 << 2) + 2)]
+    assert_eq!(decode_rice(&[186], 2), vec![7,6]);
+
+    // Testing case with multiple "true" at the end, that won't be parsed
+    // 127_u8 -> [false , true, ..., true; 8] -(decoded with 0 remainder bits)-> [0]
+    assert_eq!(decode_rice(&[127], 0), vec![0]);
+}
 
 fn _bools_to_u8(bools: &[bool; 8]) -> u8 {
     bools.iter().fold(0_u8, |num, &bool| (num << 1) + (bool as u8))
