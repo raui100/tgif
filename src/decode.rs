@@ -1,72 +1,44 @@
-use log::{debug, info};
+use log::{debug, info, trace};
 
 use crate::args::Args;
 
 pub fn decode(args: &Args) {
     debug!("Reading the TGIF file from disk");
-    let tgif = std::fs::read(&args.src).unwrap_or_else(|_| panic!("Failed reading {}", &args.src));
+    let tgif = std::fs::read(&args.src)
+        .unwrap_or_else(|_| panic!("Failed reading {}", &args.src));
 
     debug!("Parsing the header");
-    let (_name, img_width, img_height, parallel_encoding_units, remainder_bits, start_index) =
-        match &args.no_header {  // The metadata is provided via CLI or via file header
-            true => (  // The metadata of the TGIF image have been provided via CLI
-                       "TGIF",
-                       args.width.expect("Check for `None` beforehand!"),
-                       args.height.expect("Check for `None` beforehand!"),
-                       args.parallel_encoding_units.expect("Check for `None` beforehand!"),
-                       args.remainder_bits.expect("Check for `None` beforehand!"),
-                       0,  // When there is no header the first byte is already data
-            ),
-
-            false => {  // Actually parsing the header
-                let name = std::str::from_utf8(&tgif[0..4])
-                    .expect("Failed reading format name from header. Try the '--no-header' flag");
-
-                let img_width = tgif[4..8]
-                    .iter()
-                    .fold(0_u32, |res, val| (res << 8) + (*val as u32));
-
-                let img_height = tgif[8..12]
-                    .iter()
-                    .fold(0_u32, |res, val| (res << 8) + (*val as u32));
-
-                let parallel_encoding_units = tgif[12..16]
-                    .iter()
-                    .fold(0_u32, |res, val| (res << 8) + (*val as u32));
-
-                let remainder_bits = tgif[16];
-
-                let start_index = 17;  // The first 17 byte are metadata
-
-                (name, img_width, img_height, parallel_encoding_units, remainder_bits, start_index)
-            }
-        };
+    let header = parse_header(&tgif, args);
 
     debug!("Decoding Rice-code to Rice-index");
     let unordered_rice_indices = decode_rice(
-        &tgif[start_index..],
-        remainder_bits,
+        &tgif[header.start_index..],
+        header.remainder,
+        (header.width * header.height) as usize,
     );
 
     debug!("Reordering the Rice-index");
     let ordered_rice_indices = reorder_img(
         unordered_rice_indices,
-        parallel_encoding_units as usize,
-        img_width as usize,
+        header.pae as usize,
+        header.width as usize,
     );
 
     debug!("Transforming the Rice-Index to deltas");
     let deltas = reverse_rice_index(ordered_rice_indices);
 
     debug!("Transforming the delta back to the original image");
-    let img_u8 = reverse_delta(deltas, img_width as usize);
+    let img_u8 = reverse_delta(
+        deltas,
+        header.width as usize,
+    );
 
     debug!("Saving the original image to disk");
     image::save_buffer(
         &args.dst,
         &img_u8,
-        img_width,
-        img_height,
+        header.width,
+        header.height,
         image::ColorType::L8,
     )
         .unwrap();
