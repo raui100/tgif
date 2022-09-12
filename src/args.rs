@@ -1,21 +1,23 @@
 use ::clap::Parser;
 
 #[derive(Parser, Debug)]
+#[clap(name = "TGIF")]
+#[clap(about = "Encodes and decodes grayscale images from/into the Turbo Gray Image Format")]
 #[clap(author, version, about, long_about = None)]
 pub struct Args {
-    /// Input image (eg: TGIF, PNG, JPEG, GIF, BMP, ICO, TIFF, WebP, AVIF, PNM, DDS, TGA, ...)
-    #[clap(long)]
+    /// Input image (eg: TGIF, PNG, ...)
+    #[clap(value_parser)]
     pub src: camino::Utf8PathBuf,
 
-    /// Output image (eg: TGIF, PNG, JPEG, GIF, BMP, ICO, TIFF, WebP, AVIF, PNM, DDS, TGA, ...)
-    #[clap(long)]
+    /// Output image (eg: TGIF, PNG, ...)
+    #[clap(value_parser)]
     pub dst: camino::Utf8PathBuf,
 
     /// Number of bits used to encode the remainder
     #[clap(long, short)]
     pub remainder_bits: Option<u8>,
 
-    /// Number of parallel encoding units used to encode the image
+    /// Number of encoding units used to encode the image in parallel
     #[clap(long, short)]
     pub parallel_encoding_units: Option<u32>,
 
