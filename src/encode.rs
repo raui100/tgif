@@ -5,6 +5,7 @@ use ndarray::Axis;
 use nshare::ToNdarray2;
 
 use crate::args::Args;
+use crate::constants::{CHUNK_SIZE, POW_OF_TWO};
 
 /// Encodes an image to TGIF
 pub fn encode(args: &Args) {
@@ -105,160 +106,47 @@ fn rice_code(image: &ndarray::Array2<u8>, parallel_encoding_units: u32, remainde
 
     // Numbers that are being used a million times and stored here for performance
     let chunk_length = image.shape()[1] * parallel_encoding_units as usize;
-    let remainder_range = 2_u8.pow(remainder_bits as u32);
+    let rem_range = 2_u8.pow(remainder_bits as u32);
     let prev_pixels_reset = vec![0_u8; parallel_encoding_units as usize];
 
     // Stores the encoded image as a vector of bool
-    let mut img_bool: Vec<bool> = Vec::with_capacity(
+    let mut img: Vec<bool> = Vec::with_capacity(
         8 * image.shape()[0] * image.shape()[1], // Capacity is estimated for no compression
     );
 
     // Iterating over the image
     debug!("Encoding the image as Vec<bool>");
-    for rows in image.axis_chunks_iter(Axis(0), parallel_encoding_units as usize) {
-        let mut prev_pixels = prev_pixels_reset.clone();
-        for index in 0..chunk_length {
-            let pos_x = index / parallel_encoding_units as usize;
-            let pos_y = index % parallel_encoding_units as usize;
-            let prev_pixel = &prev_pixels[pos_y];
-            let pixel = rows[(pos_y, pos_x)];
-            let delta = prev_pixel.wrapping_sub(pixel);
-            let index = rice_index(delta);
-            let unary = index >> remainder_bits;
-            let remainder = index & (remainder_range - 1);
-            prev_pixels[pos_y] = pixel;
+    for axis in image.axis_iter(Axis(0)) {
+        let mut prev: u8 = 0;
+        for pixel in axis {
+            let delta = prev.wrapping_sub(*pixel);
+            let rice = RICE_INDEX[delta as usize];
+            let quot = rice / rem_range;
+            let rem = rice % rem_range;
+            prev = *pixel;  // Updating the previous pixel
 
-            // Unary coding. Pushes n "1" and one "0" to the vec
-            img_bool.extend(vec![true; unary as usize]);
-            img_bool.push(false);
-
-            // // Pushing the remainder to the vec
-            img_bool.extend(
-                (0..remainder_bits)
-                .rev() // <-> Most significant bit
-                .map(|ind| remainder & POW_OF_TWO[ind as usize] != 0)
-            );
+            unary_coding(&mut img, quot);  // Unary coding of the quotient
+            remainder_coding(&mut img, rem, remainder_bits);  // Binary coding of the rem
         }
     }
 
-    img_bool
+    img
 }
 
-#[test]
-fn test_rice_code() {
-    // // Most simple case
-    // let arr = ndarray::array![[0, 0], [0, 0]];
-    // assert_eq!(
-    //     rice_code(&arr, 1, 0),
-    //     vec![false, false, false, false]
-    // );
-
-    // Simple case
-    let arr = ndarray::array![[0, 255], [0, 254]];
-    assert_eq!(
-        rice_code(&arr, 1, 2),
-        vec![
-            false, false, false,
-            false, true, false,
-            false, false, false,
-            true, false, false, false,
-        ]
-    );
-
-    // Simple case with two parallel encoding units
-    let arr = ndarray::array![[0, 255], [0, 254]];
-    assert_eq!(
-        rice_code(&arr, 2, 2),
-        vec![
-            false, false, false, false, false, false, false, true, false, true, false, false, false,
-        ]
-    );
-
-    // Edge case with one pixel
-    let arr = ndarray::array![[255]];
-    assert_eq!(rice_code(&arr, 1, 2), vec![false, true, false]);
-}
-
-const POW_OF_TWO: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
-
-pub fn remainder_coding(remainder: u8, remainder_bits: u8) -> Vec<bool> {
-    (0..remainder_bits)
+/// Codes the remainder as boolean binary with `remainder_bits` bit-width
+pub fn remainder_coding(img: &mut Vec<bool>, rem: u8, rem_bits: u8) {
+    debug_assert!(rem_bits <= 8);  // Hoping for better optimization
+    debug_assert!(rem < 2u8.pow(rem_bits as u32));
+    img.extend(
+    (0..rem_bits)
         .rev() // <-> Most significant bit
-        .map(|ind| remainder & POW_OF_TWO[ind as usize] != 0)
-        .collect()
+        .map(|ind| rem & POW_OF_TWO[ind as usize] != 0)
+    )
 }
 
-#[test]
-fn test_remainder_coding() {
-    assert_eq!(remainder_coding(0, 1), vec![false]);
-    assert_eq!(remainder_coding(1, 1), vec![true]);
-    assert_eq!(remainder_coding(0, 2), vec![false, false]);
-    assert_eq!(remainder_coding(1, 2), vec![false, true]);
-    assert_eq!(remainder_coding(2, 2), vec![true, false]);
-    assert_eq!(remainder_coding(3, 2), vec![true, true]);
+/// Unary coding of the quotient
+pub fn unary_coding(img: &mut Vec<bool>, quot: u8) {
+    img.extend(vec![true; quot as usize]);
+    img.push(false);
+
 }
-
-#[inline(always)]
-pub fn unary_coding(num: u8) -> Vec<bool> {
-    let mut code = vec![true; num as usize];
-    code.push(false);
-
-    code
-}
-
-#[test]
-fn test_unary_coding() {
-    for ind in 0..=u8::MAX {
-        let code = unary_coding(ind);
-        for bit in code[..ind as usize].iter() {
-            assert!(bit)
-        }
-        assert!(!code.last().unwrap())
-    }
-}
-
-#[inline(always)]
-pub fn u8_to_rice_code(num: u8, remainder_bits: u8, remainder_range: u8) -> Vec<bool> {
-    debug_assert_eq!(remainder_range, 2u8.pow(remainder_bits as u32));
-    let unary = num >> remainder_bits;
-    let mut code = unary_coding(unary);
-    if remainder_bits >= 1 {
-        let remainder = remainder_coding(
-            num % remainder_range,
-            remainder_bits,
-        );
-        code.extend(remainder);
-    }
-
-    code
-}
-
-#[test]
-fn test_u8_to_rice_code() {
-    assert_eq!(
-        u8_to_rice_code(0, 0, POW_OF_TWO[0]),
-        vec![false]
-    );
-
-    assert_eq!(
-        u8_to_rice_code(0, 1, POW_OF_TWO[1]),
-        vec![false, false]
-    );
-
-    assert_eq!(
-        u8_to_rice_code(1, 0, POW_OF_TWO[0]),
-        vec![true, false]
-    );
-
-    assert_eq!(
-        u8_to_rice_code(1, 1, POW_OF_TWO[1]),
-        vec![false, true]
-    );
-
-    assert_eq!(
-        u8_to_rice_code(4, 2, POW_OF_TWO[2]),
-        vec![true, false, false, false]
-    );
-}
-
-

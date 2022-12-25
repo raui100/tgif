@@ -6,7 +6,7 @@ use log::{debug, LevelFilter};
 mod args;
 mod decode;
 mod encode;
-mod codebooks;
+mod constants;
 
 fn main() {
     // Setting up the logging environment
