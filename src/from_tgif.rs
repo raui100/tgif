@@ -22,7 +22,7 @@ pub fn run(args: &FromTGIF) {
     let img = decode(&tgif[STARTING_INDEX..], &header);
 
     // Speed in Megabyte / s
-    let rate =  1.0 / time.elapsed().as_secs_f64();
+    let rate = 1.0 / time.elapsed().as_secs_f64();
 
     debug!("Saving the original image to disk");
     image::save_buffer(
@@ -43,30 +43,41 @@ fn decode(comp: &[u8], header: &Header) -> Vec<u8> {
     assert_eq!(CHUNK_SIZE % 8, 0);
     let mut rice_ind = comp.par_chunks(CHUNK_SIZE / 8)
         .flat_map(|chunk| {
-            let mut res: Vec<u8> = Vec::with_capacity(400_000);
-            let mut num = 0_u8;
-            let mut remainder_index = 0_u8;
-            let mut code_unary = true;
 
-            for number in chunk {
-                for bit in U8_TO_ARRAY_BOOL[*number as usize] {
-                    match code_unary {
-                        true => {
-                            match bit {
-                                true => num += 1,
-                                false => code_unary = false,
-                            }
-                        }
-                        false => {
-                            num = (num << 1) + (bit as u8);
-                            remainder_index += 1;
+            // Doesn't reallocate in the case of 50 % compression rate
+            let mut res: Vec<u8> = Vec::with_capacity(CHUNK_SIZE / 2);
+
+            if header.rem_bits == 0 {
+                let mut unary = 0u8;
+                for num in chunk {
+                    for bit in U8_TO_ARRAY_BOOL[*num as usize] {
+                        if bit {
+                            unary += 1
+                        } else {
+                            res.push(unary);
+                            unary = 0
                         }
                     }
-                    if !code_unary && remainder_index == header.rem_bits {
-                        res.push(num);
-                        num = 0;
-                        remainder_index = 0;
-                        code_unary = true;
+                }
+            } else {
+                let mut it = chunk
+                    .iter()
+                    .flat_map(|n| U8_TO_ARRAY_BOOL[*n as usize]);
+
+                loop {
+                    let mut unary = 0;
+                    while let Some(true) = it.next() {
+                        unary += 1;
+                    }
+                    if let Some(bit) = it.next() {
+                        let mut remainder = bit as u8;
+                        for _ in 1..(header.rem_bits) {
+                            let bit = it.next().unwrap() as u8;
+                            remainder = (remainder << 1) + bit;
+                        }
+                        res.push((unary << header.rem_bits) + remainder);
+                    } else {
+                        break;
                     }
                 }
             }
