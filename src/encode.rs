@@ -52,14 +52,16 @@ pub fn encode(args: &Args) {
                 u32::from_be_bytes(*b"TGIF"),
                 image.shape()[1] as u32,
                 image.shape()[0] as u32,
-                parallel_encoding_units as u32,
+                parallel_encoding_units,
             ]
                 .into_iter()
                 .flat_map(|v| v.to_be_bytes())
-                .collect::<Vec<u8>>(),
         );
         img_u8.push(remainder_bits);
     }
+
+    let header_len = img_u8.len();
+    dbg!(header_len);
 
     debug!("Encoding the image as Vec<u8>");
     img_u8.extend(
@@ -73,6 +75,9 @@ pub fn encode(args: &Args) {
             .collect::<Vec<u8>>(),
     );
 
+    let img_len = img_u8.len() - header_len;
+    dbg!(img_len);
+
     debug!("Writing the image to disk");
     let mut file = std::fs::File::create(&args.dst).expect("Failed creating destination file");
     file.write_all(&img_u8)
@@ -81,20 +86,6 @@ pub fn encode(args: &Args) {
     info!("Finished!")
 }
 
-#[inline(always)]
-pub fn rice_index(delta: u8) -> u8 { RICE_INDEX[delta as usize] }
-
-const RICE_INDEX: [u8; 256] = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140, 142, 144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 166, 168, 170, 172, 174, 176, 178, 180, 182, 184, 186, 188, 190, 192, 194, 196, 198, 200, 202, 204, 206, 208, 210, 212, 214, 216, 218, 220, 222, 224, 226, 228, 230, 232, 234, 236, 238, 240, 242, 244, 246, 248, 250, 252, 254, 255, 253, 251, 249, 247, 245, 243, 241, 239, 237, 235, 233, 231, 229, 227, 225, 223, 221, 219, 217, 215, 213, 211, 209, 207, 205, 203, 201, 199, 197, 195, 193, 191, 189, 187, 185, 183, 181, 179, 177, 175, 173, 171, 169, 167, 165, 163, 161, 159, 157, 155, 153, 151, 149, 147, 145, 143, 141, 139, 137, 135, 133, 131, 129, 127, 125, 123, 121, 119, 117, 115, 113, 111, 109, 107, 105, 103, 101, 99, 97, 95, 93, 91, 89, 87, 85, 83, 81, 79, 77, 75, 73, 71, 69, 67, 65, 63, 61, 59, 57, 55, 53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33, 31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1];
-#[test]
-fn test_rice_index() {
-    assert_eq!(rice_index(0), 0);
-    assert_eq!(rice_index(1), 2);
-    assert_eq!(rice_index(2), 4);
-    assert_eq!(rice_index(255), 1);
-    assert_eq!(rice_index(254), 3);
-    assert_eq!(rice_index(127), 254);
-    assert_eq!(rice_index(128), 255);
-}
 
 fn rice_code(image: &ndarray::Array2<u8>, parallel_encoding_units: u32, remainder_bits: u8) -> Vec<bool> {
     // Asserting that the image dimensions are compatible with the number of parallel encoding units
@@ -104,14 +95,16 @@ fn rice_code(image: &ndarray::Array2<u8>, parallel_encoding_units: u32, remainde
         "Number of parallel encoding units and image height don't match"
     );
 
-    // Numbers that are being used a million times and stored here for performance
-    let chunk_length = image.shape()[1] * parallel_encoding_units as usize;
-    let rem_range = 2_u8.pow(remainder_bits as u32);
-    let prev_pixels_reset = vec![0_u8; parallel_encoding_units as usize];
+    // The remainder is smaller than this number `assert!(rem < rem_max)
+    let rem_max = 2_u8.pow(remainder_bits as u32);
+
+    let mut chunk: usize = 0;
+    let mut wasted: usize = 0;
+    let size = image.shape()[0] * image.shape()[1];
 
     // Stores the encoded image as a vector of bool
     let mut img: Vec<bool> = Vec::with_capacity(
-        8 * image.shape()[0] * image.shape()[1], // Capacity is estimated for no compression
+        8 * size, // Capacity is estimated for no compression
     );
 
     // Iterating over the image
@@ -120,33 +113,60 @@ fn rice_code(image: &ndarray::Array2<u8>, parallel_encoding_units: u32, remainde
         let mut prev: u8 = 0;
         for pixel in axis {
             let delta = prev.wrapping_sub(*pixel);
-            let rice = RICE_INDEX[delta as usize];
-            let quot = rice / rem_range;
-            let rem = rice % rem_range;
+            let rice = rice_index(delta);
+            let quot = rice / rem_max;
+            let rem = rice % rem_max;
             prev = *pixel;  // Updating the previous pixel
+            let bits = quot as usize + 1 + remainder_bits as usize;
 
+            if chunk + bits > CHUNK_SIZE {
+                wasted += CHUNK_SIZE - chunk;
+                img.extend(vec![true; CHUNK_SIZE - chunk]);
+                chunk = 0;
+            }
+
+            chunk += bits;
             unary_coding(&mut img, quot);  // Unary coding of the quotient
             remainder_coding(&mut img, rem, remainder_bits);  // Binary coding of the rem
         }
     }
-
+    info!("Used {:.2} % Bits for padding", 100.0 * (wasted as f64 / size as f64));
     img
 }
 
 /// Codes the remainder as boolean binary with `remainder_bits` bit-width
-pub fn remainder_coding(img: &mut Vec<bool>, rem: u8, rem_bits: u8) {
+fn remainder_coding(img: &mut Vec<bool>, rem: u8, rem_bits: u8) {
     debug_assert!(rem_bits <= 8);  // Hoping for better optimization
     debug_assert!(rem < 2u8.pow(rem_bits as u32));
     img.extend(
-    (0..rem_bits)
-        .rev() // <-> Most significant bit
-        .map(|ind| rem & POW_OF_TWO[ind as usize] != 0)
+        (0..rem_bits)
+            .rev() // <-> Most significant bit
+            .map(|ind| rem & POW_OF_TWO[ind as usize] != 0)
     )
 }
 
 /// Unary coding of the quotient
-pub fn unary_coding(img: &mut Vec<bool>, quot: u8) {
+fn unary_coding(img: &mut Vec<bool>, quot: u8) {
     img.extend(vec![true; quot as usize]);
     img.push(false);
+}
 
+/// Calculates the rice index for a given number
+fn rice_index(num: u8) -> u8 {
+    if num <= 127 { num * 2 }
+    else { (u8::MAX - num) * 2 + 1 }
+}
+
+#[test]
+fn test_rice_index() {
+    for num in 0..=u8::MAX {
+        assert_eq!(
+            rice_index(num),
+            {  // Alternative implementation to calculate the rice index
+                // Casts eg: 255 -> -1 and then casts to i16 prevents overflow
+                let num = (num as i8) as i16;
+                if num >= 0 { (num * 2) as u8 } else { (-num * 2 - 1) as u8 }
+            }
+        )
+    }
 }
