@@ -1,10 +1,10 @@
-use ::clap::Parser;
+use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[clap(name = "TGIF")]
 #[clap(about = "Encodes and decodes grayscale images from/into the Turbo Gray Image Format")]
 #[clap(author, version, about, long_about = None)]
-pub struct Args {
+pub struct Cli {
     /// Input image (eg: TGIF, PNG, ...)
     #[clap(value_parser)]
     pub src: camino::Utf8PathBuf,
@@ -15,21 +15,43 @@ pub struct Args {
 
     /// Number of bits used to encode the remainder
     #[clap(long, short)]
-    pub remainder_bits: Option<u8>,
+    pub rem_bits: Option<u8>,
+}
+impl Cli {
+    pub fn verify_arguments(self) -> Operation {
+        match (&self.src.extension(), &self.dst.extension()) {
+            (Some("tgif"), Some(x)) if x != &"tgif" => {
+                if self.rem_bits.is_none() {
+                    Operation::FromTGIF(FromTGIF {src: self.src, dst: self.dst})
+                } else {
+                    panic!("The number of remainder bits can only be set when converting to TGIF")
+                }
 
-    /// Number of encoding units used to encode the image in parallel
-    #[clap(long, short)]
-    pub parallel_encoding_units: Option<u32>,
+            },
+            (Some(x), Some("tgif")) if x != &"tgif" => {
+                if let Some(rem_bits) = self.rem_bits {
+                    Operation::ToTGIF(ToTGIF {src: self.src, dst: self.dst, rem_bits})
+                } else {
+                    panic!("The number of remainder bits must be set when converting to TGIF")
+                }
+            },
+            _ => panic!("Only converting to/from TGIF is supported")
+        }
+    }
+}
 
-    /// Adds no header to the TGIF file
-    #[clap(long, action)]
-    pub no_header: bool,
+pub enum Operation {
+    ToTGIF(ToTGIF),
+    FromTGIF(FromTGIF)
+}
 
-    /// Image width
-    #[clap(long, short)]
-    pub width: Option<u32>,
+pub struct ToTGIF {
+    pub src: camino::Utf8PathBuf,
+    pub dst: camino::Utf8PathBuf,
+    pub rem_bits: u8,  // Number of Bits that are used for the remainder
+}
 
-    /// Image height
-    #[clap(long, short)]
-    pub height: Option<u32>,
+pub struct FromTGIF {
+    pub src: camino::Utf8PathBuf,
+    pub dst: camino::Utf8PathBuf,
 }
