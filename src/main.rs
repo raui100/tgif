@@ -1,14 +1,14 @@
-use std::io::Write;
 use clap::Parser;
+use std::io::Write;
 
-use log::{debug, LevelFilter};
 use crate::args::Operation;
+use log::{debug, LevelFilter};
 
 mod args;
 mod constants;
+mod from_tgif;
 mod header;
 mod to_tgif;
-mod from_tgif;
 
 fn main() {
     // Setting up the logging environment
@@ -32,7 +32,6 @@ fn main() {
 
     match &args {
         Operation::ToTGIF(args) => to_tgif::run(args),
-        Operation::FromTGIF(args) => from_tgif::run(args)
+        Operation::FromTGIF(args) => from_tgif::run(args),
     }
-
 }

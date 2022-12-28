@@ -1,7 +1,9 @@
 # TGIF: Lossless image compression
 
-Simple CLI program to encode/decode grayscale images to/from the **T**urbo **G**ray **I**mage **F**ormat
+Simple CLI program to encode/decode grayscale images to/from the **T**urbo **G**ray **I**mage **F**ormat.  
+Uses Rice-Coding with delta filter and bit-padding to enable parallel decoding. 
+
 ```bash  
-tgif input.png output.tgif --remainder-bits 2 --parallel-encoding-units 1 # Encoding
+tgif -r 1 input.png output.tgif # Encoding
 tgif output.tgif input.bmp  # Decoding
 ```

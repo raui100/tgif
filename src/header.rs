@@ -21,11 +21,7 @@ impl Header {
     }
 
     pub fn to_u8(&self) -> Vec<u8> {
-        [
-            u32::from_be_bytes(*b"TGIF"),
-            self.height,
-            self.width,
-        ]
+        [u32::from_be_bytes(*b"TGIF"), self.height, self.width]
             .into_iter()
             .flat_map(|v| v.to_be_bytes())
             .chain(std::iter::once(self.rem_bits))
@@ -44,6 +40,8 @@ impl Header {
 
     fn slice_u8_as_u32_be(array: &[u8]) -> u32 {
         debug_assert_eq!(array.len(), 4);
-        array.iter().fold(0_u32, |res, val| (res << 8) + (*val as u32))
+        array
+            .iter()
+            .fold(0_u32, |res, val| (res << 8) + (*val as u32))
     }
 }
