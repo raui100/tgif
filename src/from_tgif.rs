@@ -45,7 +45,7 @@ fn decode_without_remainder(chunk: &[u8], res: &mut Vec<u8>) {
     let mut unary = 0u8;
     for num in chunk {
         for bit in U8_TO_ARRAY_BOOL[*num as usize] {
-            if bit {
+            if bit == 1 {
                 unary += 1
             } else {
                 res.push(unary);
@@ -77,15 +77,15 @@ fn decode_with_remainder(chunk: &[u8], res: &mut Vec<u8>, rem_bits: u8) {
     loop {
         // Determining the number of consecutive "1"
         let mut unary = 0;
-        while let Some(true) = it.next() {
+        while let Some(1) = it.next() {
             unary += 1;
         }
         // Checking if there is a remainder.
         if let Some(bit) = it.next() {
-            let mut remainder = bit as u8;
+            let mut remainder = bit;
             for _ in 1..rem_bits {
                 // If there is a remainder, it is always complete
-                let bit = it.next().unwrap() as u8;
+                let bit = it.next().unwrap();
                 remainder = (remainder << 1) + bit;
             }
             res.push((unary << rem_bits) + remainder);
