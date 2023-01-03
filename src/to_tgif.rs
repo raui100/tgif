@@ -68,7 +68,6 @@ fn encode(image: &ndarray::Array2<u8>, rem_bits: u8, chunk_size: usize) -> Vec<b
     let mut padding: usize = 0;
 
     // Iterating over the image
-    debug!("Encoding the image as Vec<bool>");
     for axis in image.axis_iter(Axis(0)) {
         let mut prev: u8 = 0; // All pixel outside of the image are defined as 0
         for pixel in axis {

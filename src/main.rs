@@ -29,6 +29,7 @@ fn main() {
 
     debug!("Parsing arguments from CLI");
     let args: Operation = args::Cli::parse().verify_arguments();
+    debug!("Arguments: {:?}", &args);
 
     match &args {
         Operation::ToTGIF(args) => to_tgif::run(args),
