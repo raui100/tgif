@@ -3,8 +3,8 @@ use ndarray::Axis;
 use nshare::ToNdarray2;
 use std::io::Write;
 
-use crate::args::ToTGIF;
-use crate::constants::{CHUNK_SIZE, POW_OF_TWO};
+use crate::args;
+use crate::constants::{POW_OF_TWO, RICE_INDEX};
 use crate::header::Header;
 
 pub fn run(args: &ToTGIF) {
@@ -16,7 +16,7 @@ pub fn run(args: &ToTGIF) {
         .into_ndarray2();
 
     debug!("Coding the original image with rice coding");
-    let mut img = encode(&image, args.rem_bits);
+    let mut img = encode(&image, args.rem_bits, args.chunk_size as usize);
 
     trace!("Padding the end with '1'");
     img.extend(vec![true; 8 - (image.len() % 8)]);
@@ -25,6 +25,7 @@ pub fn run(args: &ToTGIF) {
     let header = Header::new(
         image.shape()[1] as u32,
         image.shape()[0] as u32,
+        args.chunk_size,
         args.rem_bits,
     )
     .to_u8();
@@ -46,7 +47,7 @@ pub fn run(args: &ToTGIF) {
     info!("Finished! Achieved compression rate of {rate:.4} %")
 }
 
-fn encode(image: &ndarray::Array2<u8>, rem_bits: u8) -> Vec<bool> {
+fn encode(image: &ndarray::Array2<u8>, rem_bits: u8, chunk_size: usize) -> Vec<bool> {
     assert!(
         rem_bits <= 7,
         "No compression is possible with 8 or more remainder bits"
@@ -68,7 +69,6 @@ fn encode(image: &ndarray::Array2<u8>, rem_bits: u8) -> Vec<bool> {
 
     // Iterating over the image
     debug!("Encoding the image as Vec<bool>");
-    // TODO: Implement support for encoding horizontally and vertically
     for axis in image.axis_iter(Axis(0)) {
         let mut prev: u8 = 0; // All pixel outside of the image are defined as 0
         for pixel in axis {
@@ -79,10 +79,10 @@ fn encode(image: &ndarray::Array2<u8>, rem_bits: u8) -> Vec<bool> {
             let bits = quotient as usize + 1 + rem_bits as usize;
 
             // Bit-padding in case this would overstep the predetermined CHUNK_SIZE
-            if chunk + bits > CHUNK_SIZE {
+            if chunk + bits > chunk_size {
                 //
-                padding += CHUNK_SIZE - chunk;
-                img.extend(vec![true; CHUNK_SIZE - chunk]);
+                padding += chunk_size - chunk;
+                img.extend(vec![true; chunk_size - chunk]);
                 chunk = 0;
             }
 
@@ -92,6 +92,7 @@ fn encode(image: &ndarray::Array2<u8>, rem_bits: u8) -> Vec<bool> {
             remainder_coding(&mut img, remainder, rem_bits); // Binary coding of the rem
         }
     }
+
     debug!(
         "Used {:.2} % Bits for padding: {}",
         100.0 * (padding as f64 / image_size as f64),

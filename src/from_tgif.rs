@@ -4,7 +4,7 @@ use log::{debug, info, trace};
 use rayon::prelude::*;
 
 use crate::args::FromTGIF;
-use crate::constants::{CHUNK_SIZE, REV_RICE_INDEX, U8_TO_ARRAY_BOOL};
+use crate::constants::{REV_RICE_INDEX, U8_TO_ARRAY_BOOL};
 use crate::header::{Header, STARTING_INDEX};
 
 pub fn run(args: &FromTGIF) {
@@ -96,14 +96,15 @@ fn decode_with_remainder(chunk: &[u8], res: &mut Vec<u8>, rem_bits: u8) {
 }
 
 fn decode(comp: &[u8], header: &Header) -> Vec<u8> {
+    let chunk_size = header.chunk_size as usize;
     let time = Instant::now();
     // Chunks must be dividable into bytes
-    assert_eq!(CHUNK_SIZE % 8, 0);
+    assert_eq!(header.chunk_size % 8, 0);
     let mut rice_ind = comp
-        .par_chunks(CHUNK_SIZE / 8)
+        .par_chunks(chunk_size / 8)
         .flat_map(|chunk| {
             // Doesn't reallocate in the case of 50 % compression rate
-            let mut res: Vec<u8> = Vec::with_capacity(CHUNK_SIZE / 2);
+            let mut res: Vec<u8> = Vec::with_capacity(chunk_size / 2);
 
             if header.rem_bits == 0 {
                 decode_without_remainder(chunk, &mut res);
