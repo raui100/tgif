@@ -7,7 +7,7 @@ use crate::args;
 use crate::constants::{POW_OF_TWO, RICE_INDEX};
 use crate::header::Header;
 
-pub fn run(args: &ToTGIF) {
+pub fn run(args: &args::ToTGIF) {
     info!("Converting {} to {}", args.src, args.dst);
     debug!("Reading the image from disk and converting it into an 2D ndarray");
     let image = image::open(&args.src)
@@ -73,7 +73,7 @@ fn encode(image: &ndarray::Array2<u8>, rem_bits: u8, chunk_size: usize) -> Vec<b
         let mut prev: u8 = 0; // All pixel outside of the image are defined as 0
         for pixel in axis {
             let delta = prev.wrapping_sub(*pixel); // Calc the delta
-            let rice = rice_index(delta); // Determines the rice index
+            let rice = RICE_INDEX[delta as usize]; // Determines the rice index
             let quotient = rice / rem_max;
             let remainder = rice % rem_max;
             let bits = quotient as usize + 1 + rem_bits as usize;
@@ -116,29 +116,4 @@ fn remainder_coding(img: &mut Vec<bool>, rem: u8, rem_bits: u8) {
 fn unary_coding(img: &mut Vec<bool>, quot: u8) {
     img.extend(vec![true; quot as usize]);
     img.push(false);
-}
-
-/// Calculates the rice index for a given number
-fn rice_index(num: u8) -> u8 {
-    if num <= 127 {
-        num * 2
-    } else {
-        (u8::MAX - num) * 2 + 1
-    }
-}
-
-#[test]
-fn test_rice_index() {
-    for num in 0..=u8::MAX {
-        assert_eq!(rice_index(num), {
-            // Alternative implementation to calculate the rice index
-            // Casts eg: 255 -> -1 and then casts to i16 prevents overflow
-            let num = (num as i8) as i16;
-            if num >= 0 {
-                (num * 2) as u8
-            } else {
-                (-num * 2 - 1) as u8
-            }
-        })
-    }
 }
